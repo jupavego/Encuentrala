@@ -61,6 +61,15 @@ header.top::after{
   content:"";position:absolute;right:-32px;top:-32px;width:120px;height:120px;
   border-radius:50%;background:var(--mde-amarillo);opacity:.95;pointer-events:none;
 }
+/* en movil el h1 (25px, bold) envuelve a 2 lineas dentro de un header
+   angosto -- el circulo decorativo, pensado para un header ancho de
+   escritorio, terminaba tapando el final de la primera linea ("más").
+   Se achica y se recorre para que quede solo como acento de esquina, sin
+   alcanzar el texto. */
+@media (max-width:480px){
+  header.top::after{width:60px;height:60px;right:-18px;top:-18px}
+  header.top h1{font-size:21px}
+}
 header.top h1{
   font-size:25px;line-height:1.1;letter-spacing:-.4px;color:#fff;font-weight:900;position:relative;
 }
@@ -87,20 +96,22 @@ header.top .sub{
    los dos metodos alternativos de ubicar el punto (direccion por partes,
    coordenadas), siempre a la vista sin tener que entrar a la tarjeta
    "2. Marca el punto". */
-.fila-toggles{display:flex;gap:8px 34px;flex-wrap:wrap;align-items:flex-start;
-  background:var(--card);border:1px solid var(--rule);border-radius:var(--radio-sm);
-  padding:14px 22px;margin:0 0 20px;box-shadow:var(--shadow)}
-.fila-toggles > .toggle-extra{flex:0 1 auto;margin:0}
-.fila-toggles > .toggle-extra[open]{flex:1 1 100%}
-.fila-toggles .direccion-partes{width:100%}
-.toggle-extra{margin:2px 0}
-.toggle-extra summary{cursor:pointer;font-size:12px;font-weight:700;color:var(--icbf-verde-osc);
-  list-style:none;padding:7px 0;user-select:none}
-.toggle-extra summary:hover{color:var(--icbf-verde)}
+.fila-toggles{background:var(--card);border:1px solid var(--rule);border-radius:var(--radio-sm);
+  margin:0 0 20px;box-shadow:var(--shadow);overflow:hidden}
+.toggle-extra{margin:0;min-width:0}
+/* el <summary> es el disparador nativo de <details> -- se estira a todo
+   el ancho de la tarjeta (no solo el texto) para que toda la franja sea
+   clicable, con un icono real (chevron, mismo patron que .grupo-banda mas
+   abajo) que rota al abrir, en vez del "+"/"-" de texto de antes. */
+.toggle-extra summary{cursor:pointer;display:flex;align-items:center;justify-content:space-between;
+  gap:12px;font-size:13px;font-weight:700;color:var(--icbf-verde-osc);
+  list-style:none;padding:14px 22px;user-select:none;transition:background-color .15s}
+.toggle-extra summary:hover{background-color:var(--icbf-verde-suave);color:var(--icbf-verde)}
 .toggle-extra summary::-webkit-details-marker{display:none}
-.toggle-extra summary::before{content:"+  ";color:var(--icbf-verde);font-weight:900}
-.toggle-extra[open] summary::before{content:"–  "}
-.toggle-extra .direccion-partes{margin-top:8px}
+.toggle-extra summary::after{content:"▾";display:inline-block;flex:0 0 auto;
+  color:var(--icbf-verde);font-weight:900;font-size:15px;transition:transform .2s}
+.toggle-extra[open] summary::after{transform:rotate(-180deg)}
+.toggle-extra .direccion-partes{margin:0 22px 20px}
 
 details.card summary{cursor:pointer;list-style:none}
 details.card summary::-webkit-details-marker{display:none}
@@ -114,7 +125,7 @@ details.card[open] summary h2::before{content:"–  "}
 .card:hover{transform:translateY(-3px);box-shadow:var(--shadow-lg)}
 .panel-mapa .card:hover{transform:none;box-shadow:var(--shadow)}
 .card + .card{margin-top:20px}
-.tablero + .card{margin-top:20px}
+.tablero + .card,.tablero + .fila-toggles{margin-top:20px}
 .card h2{font-size:18px;margin-bottom:11px;color:var(--icbf-verde-osc);font-weight:900;letter-spacing:-.2px}
 .card h2 small{font-weight:600;color:var(--ink2);font-family:var(--sans);display:block;margin-top:5px;
   letter-spacing:0;font-size:12px}
@@ -309,48 +320,6 @@ footer.build .autoria{display:inline-block;margin-top:12px;font-size:10.5px;font
     </div>
   </header>
 
-  <div class="fila-toggles">
-    <details class="toggle-extra">
-      <summary>¿No encontró la dirección? Armarla por partes</summary>
-      <div class="direccion-partes">
-        <div>
-          <label for="viaTipo">Vía</label>
-          <select id="viaTipo">
-            <option>Calle</option>
-            <option>Carrera</option>
-            <option>Avenida</option>
-            <option>Avenida Calle</option>
-            <option>Avenida Carrera</option>
-            <option>Diagonal</option>
-            <option>Transversal</option>
-            <option>Circular</option>
-            <option>Autopista</option>
-            <option value="Vía">Vía (otra)</option>
-          </select>
-        </div>
-        <div>
-          <label for="viaNum1">Número</label>
-          <input type="text" id="viaNum1" placeholder="45 o 45A">
-        </div>
-        <div class="separador" aria-hidden="true">#</div>
-        <div>
-          <label for="viaNum2">Cruce</label>
-          <input type="text" id="viaNum2" placeholder="23 o 23B">
-        </div>
-        <div class="separador" aria-hidden="true">-</div>
-        <div>
-          <label for="viaNum3">Placa</label>
-          <input type="text" id="viaNum3" placeholder="10">
-        </div>
-        <div class="campo-ancho">
-          <label for="viaComplemento">Complemento (barrio, vereda, interior… opcional)</label>
-          <input type="text" id="viaComplemento" placeholder="Ej: Barrio Centro, interior 2">
-        </div>
-        <button type="button" id="btnBuscarPartes" disabled>Buscar esta dirección</button>
-      </div>
-    </details>
-  </div>
-
   <div class="tablero">
     <div class="panel-controles">
 
@@ -395,6 +364,48 @@ footer.build .autoria{display:inline-block;margin-top:12px;font-size:10.5px;font
         <div class="leyenda-mapa" id="leyendaBandas"></div>
       </div>
     </div>
+  </div>
+
+  <div class="fila-toggles">
+    <details class="toggle-extra">
+      <summary>¿No encontró la dirección? Armarla por partes</summary>
+      <div class="direccion-partes">
+        <div>
+          <label for="viaTipo">Vía</label>
+          <select id="viaTipo">
+            <option>Calle</option>
+            <option>Carrera</option>
+            <option>Avenida</option>
+            <option>Avenida Calle</option>
+            <option>Avenida Carrera</option>
+            <option>Diagonal</option>
+            <option>Transversal</option>
+            <option>Circular</option>
+            <option>Autopista</option>
+            <option value="Vía">Vía (otra)</option>
+          </select>
+        </div>
+        <div>
+          <label for="viaNum1">Número</label>
+          <input type="text" id="viaNum1" placeholder="45 o 45A">
+        </div>
+        <div class="separador" aria-hidden="true">#</div>
+        <div>
+          <label for="viaNum2">Cruce</label>
+          <input type="text" id="viaNum2" placeholder="23 o 23B">
+        </div>
+        <div class="separador" aria-hidden="true">-</div>
+        <div>
+          <label for="viaNum3">Placa</label>
+          <input type="text" id="viaNum3" placeholder="10">
+        </div>
+        <div class="campo-ancho">
+          <label for="viaComplemento">Complemento (barrio, vereda, interior… opcional)</label>
+          <input type="text" id="viaComplemento" placeholder="Ej: Barrio Centro, interior 2">
+        </div>
+        <button type="button" id="btnBuscarPartes" disabled>Buscar esta dirección</button>
+      </div>
+    </details>
   </div>
 
   <div class="card">

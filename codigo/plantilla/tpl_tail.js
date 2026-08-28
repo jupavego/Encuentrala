@@ -486,7 +486,9 @@ function buscarYPintar() {
         "<b>" + esc(p.n || "(sin nombre)") + "</b>" +
         "Código: " + esc(p.id || "—") + "<br>" +
         "Entidad: " + esc(p.en || "—") + "<br>" +
+        (p.contrato ? "Contrato: " + esc(p.contrato) + "<br>" : "") +
         (p.dir ? "Dirección: " + esc(p.dir) + "<br>" : "") +
+        (p.tel ? "Tel: " + esc(p.tel) + "<br>" : "") +
         (p.serv ? "Servicio: " + esc(p.serv) + "<br>" : "") +
         "Cupos disponibles: " + mil(disponibles(p)),
         { direction: "top", sticky: true, opacity: 0.97 }
