@@ -602,7 +602,10 @@ function initMapaBase() {
   }).addTo(map);
   map.invalidateSize();
   const bb = D.bbox_depto; // [oeste, sur, este, norte]
-  map.fitBounds([[bb[1], bb[0]], [bb[3], bb[2]]], { padding: [4, 4] });
+  // animate:false: mismo motivo que en colocarPin (ver mas abajo) -- si el
+  // encuadre inicial queda animandose de fondo, el pixel origin que usa la
+  // caida del pin (llamada justo despues, mas abajo) queda desactualizado.
+  map.fitBounds([[bb[1], bb[0]], [bb[3], bb[2]]], { padding: [4, 4], animate: false });
   dibujarTodosMunicipios();
   // el mapa siempre es interactivo, con o sin municipio elegido -- quien
   // ya sabe donde queda su punto puede simplemente hacer clic sin pasar
@@ -615,15 +618,20 @@ function initMapaBase() {
     colocarPin(true);
     buscarYPintar();
   });
-  // pin por defecto ya puesto desde el arranque (centro geografico del
+  // pin por defecto ya puesto desde el arranque, en Medellin (capital del
   // departamento), draggable de una, para quien solo quiere arrastrarlo a
-  // su punto sin elegir municipio ni escribir nada.
-  PUNTO = { lat: (bb[1] + bb[3]) / 2, lon: (bb[0] + bb[2]) / 2 };
-  colocarPin(false);
+  // su punto sin elegir municipio ni escribir nada. mantenerVista=true: a
+  // diferencia de colocarPin() normal, el encuadre inicial (fitBounds de
+  // arriba, todo el departamento) no se toca -- se ve Antioquia completo
+  // con el pin ya puesto en Medellin dentro de esa vista, no un zoom
+  // cercano centrado ahi.
+  const medellin = D.municipios.find(m => m.nombre === "MEDELLIN");
+  PUNTO = medellin ? { lat: medellin.centro[0], lon: medellin.centro[1] } : { lat: (bb[1] + bb[3]) / 2, lon: (bb[0] + bb[2]) / 2 };
+  colocarPin(false, true);
   buscarYPintar();
 }
 
-function colocarPin(zoomCerca) {
+function colocarPin(zoomCerca, mantenerVista) {
   if (zoomCerca == null) zoomCerca = true;
   if (!PUNTO || !MAPA) return;
   if (MARKER) MAPA.removeLayer(MARKER);
@@ -637,8 +645,13 @@ function colocarPin(zoomCerca) {
   // dado fitBounds"): en municipios grandes el fitBounds a todo el
   // poligono puede quedar tan alejado que el pin y los resultados cercanos
   // se amontonan unos sobre otros y tapan las etiquetas del mapa base.
-  const zoomDestino = zoomCerca ? Math.max(MAPA.getZoom(), 14) : Math.max(MAPA.getZoom(), 12);
-  MAPA.setView([PUNTO.lat, PUNTO.lon], zoomDestino, { animate: false });
+  // mantenerVista=true (solo lo usa el pin por defecto en Medellin, ver
+  // initMapaBase) se salta este setView del todo -- el encuadre ya puesto
+  // por quien llamo (p.ej. el departamento completo) no se toca.
+  if (!mantenerVista) {
+    const zoomDestino = zoomCerca ? Math.max(MAPA.getZoom(), 14) : Math.max(MAPA.getZoom(), 12);
+    MAPA.setView([PUNTO.lat, PUNTO.lon], zoomDestino, { animate: false });
+  }
   const destino = L.latLng(PUNTO.lat, PUNTO.lon);
   const destPt = MAPA.latLngToLayerPoint(destino);
   const inicio = MAPA.layerPointToLatLng(L.point(destPt.x, destPt.y - 90));
@@ -799,7 +812,14 @@ function buscarYPintar() {
         "<br>Cupos: " + mil(p.cu) + " · Atendidos: " + mil(p.at) + " · " + chipCupos(p) +
         "<br>" + fmtDist(d));
       m.off("click");
-      m.on("click", () => {
+      m.on("click", (e) => {
+        // los circleMarker burbujean su clic hacia el mapa por defecto
+        // (bubblingMouseEvents), y el mapa tiene su propio "click" para
+        // mover el pin y re-buscar (ver initMapaBase) -- sin cortar la
+        // propagacion aqui, ese click en cascada reconstruye toda la tabla
+        // de Resultados justo despues de resaltarFila() y deja el punto de
+        // referencia saltando a la UDS en la que se hizo clic.
+        L.DomEvent.stopPropagation(e);
         if (m.isPopupOpen()) m.closePopup(); else m.openPopup();
         resaltarFila(p.id);
       });
@@ -1096,7 +1116,7 @@ function init() {
     "<dt>Unidades de Servicio (UDS)</dt><dd>" + esc(D.meta.fuente) + " — " + mil(D.meta.n_uds) + " UDS activas con coordenada, en " + D.meta.n_municipios + " municipios.</dd>" +
     "<dt>Coordenadas</dt><dd>Se toman de las columnas \"Latitud UDS\"/\"Longitud UDS\" (grados/minutos/segundos) de la hoja CUENTAME, parseadas a decimal. " + (D.meta.n_sin_coordenada ? mil(D.meta.n_sin_coordenada) + " UDS activas no tenían coordenada legible y no aparecen aquí." : "Todas las UDS activas tenían coordenada legible.") + "</dd>" +
     "<dt>Contorno de cada municipio</dt><dd>Se dibuja el polígono real (\"antioquia_con_comunas v5.geojson\") de " + D.meta.n_con_poligono + " de los " + D.meta.n_municipios + " municipios al elegirlos arriba, simplificado para que cargue liviano. Medellín es la única excepción: en esa fuente queda subdividida en sus comunas en vez de un solo polígono, así que ahí se sigue usando el rectángulo que envuelve sus propias UDS.</dd>" +
-    "<dt>Pin por defecto</dt><dd>Al abrir la página el pin ya está puesto (centro del departamento) y el mapa muestra el contorno tenue de los 124 municipios con polígono disponible, para poder ubicar el punto arrastrando el pin o haciendo clic sin necesidad de elegir un municipio antes. Al elegir un municipio, el pin salta al casco urbano (cabecera municipal, tomado de \"COORDENADAS MUNICIPIOS.xlsx\") — no al centro geométrico del contorno, que en municipios alargados o con corregimientos dispersos puede caer en zona rural despoblada — y ese contorno se resalta con trazo más marcado sobre el de los demás.</dd>" +
+    "<dt>Pin por defecto</dt><dd>Al abrir la página el pin ya está puesto en Medellín (capital del departamento) y el mapa se ve con el zoom suficiente para mostrar Antioquia completo, con el contorno tenue de los 124 municipios con polígono disponible, para poder ubicar el punto arrastrando el pin o haciendo clic sin necesidad de elegir un municipio antes. Al elegir un municipio, el pin salta al casco urbano (cabecera municipal, tomado de \"COORDENADAS MUNICIPIOS.xlsx\") — no al centro geométrico del contorno, que en municipios alargados o con corregimientos dispersos puede caer en zona rural despoblada — y ese contorno se resalta con trazo más marcado sobre el de los demás.</dd>" +
     "<dt>Coordenadas (latitud/longitud)</dt><dd>Los campos de latitud/longitud, debajo del formulario por partes, siempre reflejan el punto marcado (sin importar cómo se haya puesto: municipio, dirección, clic, arrastre o los campos mismos) y también permiten ubicar el punto directamente si ya se tienen las coordenadas, sin depender del geocodificador ni de internet.</dd>" +
     "<dt>Búsqueda de dirección</dt><dd>Usa el geocodificador gratuito de OpenStreetMap (Nominatim), acotado al municipio elegido; es un servicio externo en vivo y necesita conexión a internet. Nominatim no tiene numeración predial en Colombia (ubica la vía completa, no el número exacto de la puerta) y su buscador puede no encontrar nada si el número y el barrio/vereda van juntos en el mismo texto; por eso, si la búsqueda completa no encuentra nada, se reintenta automáticamente con versiones más simples (sin el complemento, sin la placa) — cuando eso pasa se avisa en el mensaje, y toca ajustar el pin arrastrándolo hasta el punto exacto. Ubicar el punto manualmente en el mapa no depende de internet salvo por la carga de los mapas base.</dd>" +
     "<dt>Radio de búsqueda</dt><dd>Adaptativo: empieza en 500 m y va ampliando (1, 2, 5, 10, 20, 50, 100 km) hasta encontrar al menos " + MIN_RESULTADOS + " UDS o llegar al tope — así una zona rural dispersa no se queda sin resultados. Los resultados se agrupan en 3 bandas (cerca / media / lejos), calculadas como tercios del radio que terminó usando cada búsqueda.</dd>" +
