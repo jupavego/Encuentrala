@@ -41,7 +41,7 @@ function contenidoInfoUds(p) {
     '<div class="info-uds-grid">' +
     "<div><span>Código</span>" + esc(p.id || "—") + "</div>" +
     (p.contrato ? "<div><span>Contrato</span>" + esc(p.contrato) + "</div>" : "") +
-    (p.serv ? '<div class="ancho"><span>Servicio</span>' + esc(p.serv) + "</div>" : "") +
+    (p.serv ? '<div class="full"><span>Servicio</span>' + esc(p.serv) + "</div>" : "") +
     '<div class="full"><span>Entidad</span>' + esc(p.en || "—") + "</div>" +
     (p.dir ? "<div><span>Dirección</span>" + esc(p.dir) + "</div>" : "") +
     (p.tel ? "<div><span>Tel</span>" + esc(p.tel) + "</div>" : "") +

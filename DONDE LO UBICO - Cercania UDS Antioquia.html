@@ -117,7 +117,7 @@ header.top .sub{
   color:#5C4400;font-weight:900;font-size:13px;box-shadow:0 3px 8px rgba(201,154,0,.35);
   transition:transform .25s,background-color .15s,color .15s}
 .toggle-extra[open] summary::after{transform:rotate(-180deg);background-color:var(--mde-amarillo-osc);color:#fff}
-.toggle-extra .direccion-partes{margin:0 22px 20px}
+.toggle-extra .direccion-partes{margin:12px 22px 20px}
 
 details.card summary{cursor:pointer;list-style:none}
 details.card summary::-webkit-details-marker{display:none}
@@ -264,7 +264,6 @@ details.card[open] summary h2::before{content:"–  "}
 .info-uds-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:3px 16px}
 .info-uds-grid div{font-size:11px;color:var(--ink);font-weight:600;line-height:1.3}
 .info-uds-grid .full{grid-column:1/-1}
-.info-uds-grid .ancho{grid-column:span 2}
 /* la caja de arriba es de ALTURA FIJA a proposito (evita el parpadeo del
    hover, ver mas arriba) pero el contenido es variable -- hay entidades
    contratistas de mas de 120 caracteres y direcciones reales de hasta
@@ -521,7 +520,7 @@ function contenidoInfoUds(p) {
     '<div class="info-uds-grid">' +
     "<div><span>Código</span>" + esc(p.id || "—") + "</div>" +
     (p.contrato ? "<div><span>Contrato</span>" + esc(p.contrato) + "</div>" : "") +
-    (p.serv ? '<div class="ancho"><span>Servicio</span>' + esc(p.serv) + "</div>" : "") +
+    (p.serv ? '<div class="full"><span>Servicio</span>' + esc(p.serv) + "</div>" : "") +
     '<div class="full"><span>Entidad</span>' + esc(p.en || "—") + "</div>" +
     (p.dir ? "<div><span>Dirección</span>" + esc(p.dir) + "</div>" : "") +
     (p.tel ? "<div><span>Tel</span>" + esc(p.tel) + "</div>" : "") +
