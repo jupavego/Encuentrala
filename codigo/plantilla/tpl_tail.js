@@ -545,8 +545,38 @@ function nivelesDesdePartes() {
 }
 
 /* ---------------- municipio ---------------- */
-function onMunicipioChange() {
-  const nombre = $("#selMunicipio").value;
+// buscador con texto libre en vez de <select>: filtra D.municipios por
+// substring (sin distinguir mayus/tildes) y muestra hasta 8 coincidencias
+// como botones "candidato", mismo patron que las coincidencias de
+// direccion (ver presentarResultadoBusqueda) para que la interaccion se
+// sienta igual en todo el sitio.
+function normalizar(s) {
+  return s.normalize("NFD").replace(new RegExp("[̀-ͯ]", "g"), "").toLowerCase();
+}
+function renderListaMunicipios(filtro) {
+  const cont = $("#listaMunicipios");
+  cont.innerHTML = "";
+  const f = normalizar(filtro.trim());
+  if (!f) return;
+  const coincidencias = D.municipios.filter(m => normalizar(m.nombre).includes(f));
+  coincidencias.slice(0, 8).forEach(m => {
+    const b = el("button", "candidato", esc(m.nombre + " (" + m.n + " UDS)"));
+    b.type = "button";
+    b.onclick = () => seleccionarMunicipioInput(m.nombre);
+    cont.appendChild(b);
+  });
+  if (!coincidencias.length) {
+    cont.appendChild(el("div", "nota", "Sin coincidencias."));
+  } else if (coincidencias.length > 8) {
+    cont.appendChild(el("div", "nota", "y " + (coincidencias.length - 8) + " más — sigue escribiendo para acotar."));
+  }
+}
+function seleccionarMunicipioInput(nombre) {
+  $("#inputMunicipio").value = nombre;
+  $("#listaMunicipios").innerHTML = "";
+  onMunicipioChange(nombre);
+}
+function onMunicipioChange(nombre) {
   const inputDir = $("#inputDir"), btnBuscar = $("#btnBuscar"), btnPartes = $("#btnBuscarPartes");
   if (!nombre) {
     MUNI = null; PUNTO = null;
@@ -591,14 +621,28 @@ function onMunicipioChange() {
 
 /* ---------------- init ---------------- */
 function init() {
-  const sel = $("#selMunicipio");
-  D.municipios.forEach(m => {
-    const o = document.createElement("option");
-    o.value = m.nombre;
-    o.textContent = m.nombre + " (" + m.n + " UDS)";
-    sel.appendChild(o);
-  });
-  sel.onchange = onMunicipioChange;
+  const inputMuni = $("#inputMunicipio");
+  inputMuni.oninput = () => {
+    if (!inputMuni.value.trim()) {
+      $("#listaMunicipios").innerHTML = "";
+      if (MUNI) onMunicipioChange(null); // borraron el campo del todo -> se deselecciona
+      return;
+    }
+    renderListaMunicipios(inputMuni.value);
+  };
+  inputMuni.onfocus = () => { if (inputMuni.value.trim()) renderListaMunicipios(inputMuni.value); };
+  inputMuni.onkeydown = (e) => {
+    if (e.key === "Enter") {
+      const primero = $("#listaMunicipios .candidato");
+      if (primero) primero.click();
+    } else if (e.key === "Escape") {
+      inputMuni.blur();
+    }
+  };
+  // en click, mousedown dispara antes que blur -- el timeout deja que el
+  // onclick del boton candidato (ver seleccionarMunicipioInput) alcance a
+  // correr antes de que la lista se vacie.
+  inputMuni.onblur = () => setTimeout(() => { $("#listaMunicipios").innerHTML = ""; }, 150);
 
   const inputDir = $("#inputDir"), btnBuscar = $("#btnBuscar");
   btnBuscar.onclick = () => buscarDireccion(inputDir.value);
