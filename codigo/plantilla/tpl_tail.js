@@ -43,7 +43,7 @@ function contenidoInfoUds(p) {
     (p.contrato ? "<div><span>Contrato</span>" + esc(p.contrato) + "</div>" : "") +
     (p.serv ? '<div class="full"><span>Servicio</span>' + esc(p.serv) + "</div>" : "") +
     '<div class="full"><span>Entidad</span>' + esc(p.en || "—") + "</div>" +
-    (p.dir ? "<div><span>Dirección</span>" + esc(p.dir) + "</div>" : "") +
+    (p.dir ? '<div class="full"><span>Dirección</span>' + esc(p.dir) + "</div>" : "") +
     (p.tel ? "<div><span>Tel</span>" + esc(p.tel) + "</div>" : "") +
     "<div><span>Cupos</span>" + mil(disponibles(p)) + " disponibles</div>" +
     "</div>";
