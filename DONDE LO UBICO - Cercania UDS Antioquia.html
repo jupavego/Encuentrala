@@ -109,16 +109,25 @@ header.top .sub{
   letter-spacing:0;font-size:12px}
 .nota{font-size:12px;color:var(--ink3);line-height:1.5;margin:2px 2px 14px;font-weight:500}
 
-.grupo-sel{display:flex;flex-direction:column;gap:6px;margin-bottom:4px}
+.grupo-sel{display:flex;flex-direction:column;gap:6px;margin-bottom:4px;position:relative}
 .grupo-sel label{font-size:11px;font-weight:700;color:var(--ink2);text-transform:uppercase;letter-spacing:.8px}
 #inputMunicipio{
   width:100%;background:var(--sunk);border:2.5px solid var(--rule2);border-radius:var(--radio-pill);
-  padding:12px 20px;font-size:14.5px;color:var(--ink);font-weight:700;font-family:var(--display);
+  padding:12px 44px 12px 20px;font-size:14.5px;color:var(--ink);font-weight:700;font-family:var(--display);
   transition:border-color .15s,transform .1s;
 }
 #inputMunicipio:hover{border-color:var(--icbf-verde)}
 #inputMunicipio:focus{border-color:var(--icbf-verde);outline:none}
-#listaMunicipios:not(:empty){margin-top:8px}
+/* flechita de "desplegable" -- puramente visual, el input sigue siendo de
+   texto libre; solo avisa que hacer clic sin escribir muestra la lista
+   completa, no solo resultados filtrados. */
+.grupo-sel::after{content:"";position:absolute;right:20px;top:41px;width:9px;height:9px;
+  border-right:2.5px solid var(--ink3);border-bottom:2.5px solid var(--ink3);
+  transform:rotate(45deg);pointer-events:none}
+#listaMunicipios{position:absolute;top:100%;left:0;right:0;z-index:40;margin-top:6px;
+  max-height:280px;overflow-y:auto;background:var(--card);border:2px solid var(--rule2);
+  border-radius:var(--radio-sm);box-shadow:var(--shadow-lg)}
+#listaMunicipios:not(:empty){padding:6px}
 
 .buscar-dir{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px}
 .buscar-dir input{
@@ -901,30 +910,29 @@ function nivelesDesdePartes() {
 }
 
 /* ---------------- municipio ---------------- */
-// buscador con texto libre en vez de <select>: filtra D.municipios por
-// substring (sin distinguir mayus/tildes) y muestra hasta 8 coincidencias
-// como botones "candidato", mismo patron que las coincidencias de
-// direccion (ver presentarResultadoBusqueda) para que la interaccion se
-// sienta igual en todo el sitio.
+// hibrido select+buscador: hace clic en el campo (sin escribir nada) y
+// aparece la lista completa de los 125 municipios para recorrer con scroll
+// -- igual que el <select> de antes -- y escribir la va filtrando en vivo
+// (sin distinguir mayus/tildes). Coincidencias como botones "candidato",
+// mismo patron que las coincidencias de direccion (ver
+// presentarResultadoBusqueda) para que la interaccion se sienta igual en
+// todo el sitio.
 function normalizar(s) {
   return s.normalize("NFD").replace(new RegExp("[̀-ͯ]", "g"), "").toLowerCase();
 }
 function renderListaMunicipios(filtro) {
   const cont = $("#listaMunicipios");
   cont.innerHTML = "";
-  const f = normalizar(filtro.trim());
-  if (!f) return;
-  const coincidencias = D.municipios.filter(m => normalizar(m.nombre).includes(f));
-  coincidencias.slice(0, 8).forEach(m => {
+  const f = normalizar((filtro || "").trim());
+  const coincidencias = f ? D.municipios.filter(m => normalizar(m.nombre).includes(f)) : D.municipios;
+  coincidencias.forEach(m => {
     const b = el("button", "candidato", esc(m.nombre + " (" + m.n + " UDS)"));
     b.type = "button";
     b.onclick = () => seleccionarMunicipioInput(m.nombre);
     cont.appendChild(b);
   });
-  if (!coincidencias.length) {
+  if (f && !coincidencias.length) {
     cont.appendChild(el("div", "nota", "Sin coincidencias."));
-  } else if (coincidencias.length > 8) {
-    cont.appendChild(el("div", "nota", "y " + (coincidencias.length - 8) + " más — sigue escribiendo para acotar."));
   }
 }
 function seleccionarMunicipioInput(nombre) {
@@ -979,14 +987,13 @@ function onMunicipioChange(nombre) {
 function init() {
   const inputMuni = $("#inputMunicipio");
   inputMuni.oninput = () => {
-    if (!inputMuni.value.trim()) {
-      $("#listaMunicipios").innerHTML = "";
-      if (MUNI) onMunicipioChange(null); // borraron el campo del todo -> se deselecciona
-      return;
-    }
+    if (!inputMuni.value.trim() && MUNI) onMunicipioChange(null); // borraron el campo del todo -> se deselecciona
     renderListaMunicipios(inputMuni.value);
   };
-  inputMuni.onfocus = () => { if (inputMuni.value.trim()) renderListaMunicipios(inputMuni.value); };
+  // al enfocar sin haber escrito nada se ve la lista completa (los 125
+  // municipios, con scroll) -- se comporta como el <select> de antes ademas
+  // de filtrar al escribir.
+  inputMuni.onfocus = () => renderListaMunicipios(inputMuni.value);
   inputMuni.onkeydown = (e) => {
     if (e.key === "Enter") {
       const primero = $("#listaMunicipios .candidato");

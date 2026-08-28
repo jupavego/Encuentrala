@@ -109,16 +109,25 @@ header.top .sub{
   letter-spacing:0;font-size:12px}
 .nota{font-size:12px;color:var(--ink3);line-height:1.5;margin:2px 2px 14px;font-weight:500}
 
-.grupo-sel{display:flex;flex-direction:column;gap:6px;margin-bottom:4px}
+.grupo-sel{display:flex;flex-direction:column;gap:6px;margin-bottom:4px;position:relative}
 .grupo-sel label{font-size:11px;font-weight:700;color:var(--ink2);text-transform:uppercase;letter-spacing:.8px}
 #inputMunicipio{
   width:100%;background:var(--sunk);border:2.5px solid var(--rule2);border-radius:var(--radio-pill);
-  padding:12px 20px;font-size:14.5px;color:var(--ink);font-weight:700;font-family:var(--display);
+  padding:12px 44px 12px 20px;font-size:14.5px;color:var(--ink);font-weight:700;font-family:var(--display);
   transition:border-color .15s,transform .1s;
 }
 #inputMunicipio:hover{border-color:var(--icbf-verde)}
 #inputMunicipio:focus{border-color:var(--icbf-verde);outline:none}
-#listaMunicipios:not(:empty){margin-top:8px}
+/* flechita de "desplegable" -- puramente visual, el input sigue siendo de
+   texto libre; solo avisa que hacer clic sin escribir muestra la lista
+   completa, no solo resultados filtrados. */
+.grupo-sel::after{content:"";position:absolute;right:20px;top:41px;width:9px;height:9px;
+  border-right:2.5px solid var(--ink3);border-bottom:2.5px solid var(--ink3);
+  transform:rotate(45deg);pointer-events:none}
+#listaMunicipios{position:absolute;top:100%;left:0;right:0;z-index:40;margin-top:6px;
+  max-height:280px;overflow-y:auto;background:var(--card);border:2px solid var(--rule2);
+  border-radius:var(--radio-sm);box-shadow:var(--shadow-lg)}
+#listaMunicipios:not(:empty){padding:6px}
 
 .buscar-dir{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px}
 .buscar-dir input{
