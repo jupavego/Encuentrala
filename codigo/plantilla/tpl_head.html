@@ -266,9 +266,14 @@ details.card[open] summary h2::before{content:"–  "}
   font-family:var(--display);margin-bottom:3px;line-height:1.2}
 .info-uds-nombre span{font-size:9px;font-weight:800;color:var(--ink3);
   text-transform:uppercase;letter-spacing:.5px;font-family:var(--sans);margin-right:6px}
-.info-uds-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1px 16px}
-.info-uds-grid div{font-size:11px;color:var(--ink);font-weight:600;line-height:1.35}
-.info-uds-grid .full{grid-column:1/-1}
+/* flex, no grid: con grid, la ultima fila con menos campos que columnas
+   dejaba esas columnas vacias (ancho fijo del track, aunque no hubiera
+   nada ahi) -- espacio en blanco a la derecha reportado. Con flex-wrap +
+   flex-grow, los campos que SI caen en una fila se reparten y estiran
+   para llenarla completa, sea cual sea la cantidad que quede ahi. */
+.info-uds-grid{display:flex;flex-wrap:wrap;gap:1px 16px}
+.info-uds-grid div{flex:1 1 130px;font-size:11px;color:var(--ink);font-weight:600;line-height:1.35}
+.info-uds-grid .full{flex:1 1 100%}
 .info-uds-grid span{font-size:9px;font-weight:800;color:var(--ink3);
   text-transform:uppercase;letter-spacing:.5px;margin-right:4px}
 /* la caja de arriba es de ALTURA FIJA a proposito (evita el parpadeo del
