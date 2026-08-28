@@ -101,16 +101,22 @@ header.top .sub{
 .toggle-extra{margin:0;min-width:0}
 /* el <summary> es el disparador nativo de <details> -- se estira a todo
    el ancho de la tarjeta (no solo el texto) para que toda la franja sea
-   clicable, con un icono real (chevron, mismo patron que .grupo-banda mas
-   abajo) que rota al abrir, en vez del "+"/"-" de texto de antes. */
+   clicable, con un icono real (chevron en insignia circular, mismo patron
+   que .grupo-banda mas abajo) que rota al abrir. Paleta amarilla propia
+   (no verde) para que se sienta mas vistoso y distinto del resto del
+   sitio, en linea con la caja amarilla que ya usa el formulario abierto. */
 .toggle-extra summary{cursor:pointer;display:flex;align-items:center;justify-content:space-between;
-  gap:12px;font-size:13px;font-weight:700;color:var(--icbf-verde-osc);
-  list-style:none;padding:14px 22px;user-select:none;transition:background-color .15s}
-.toggle-extra summary:hover{background-color:var(--icbf-verde-suave);color:var(--icbf-verde)}
+  gap:14px;font-size:13.5px;font-weight:800;color:#5C4400;
+  list-style:none;padding:15px 22px;user-select:none;
+  background:linear-gradient(120deg,#FFFBEA 0%,#FFEFB0 100%);
+  transition:background .18s}
+.toggle-extra summary:hover{background:linear-gradient(120deg,#FFF6D6,#FFE68A)}
 .toggle-extra summary::-webkit-details-marker{display:none}
-.toggle-extra summary::after{content:"▾";display:inline-block;flex:0 0 auto;
-  color:var(--icbf-verde);font-weight:900;font-size:15px;transition:transform .2s}
-.toggle-extra[open] summary::after{transform:rotate(-180deg)}
+.toggle-extra summary::after{content:"▾";display:flex;align-items:center;justify-content:center;
+  flex:0 0 auto;width:26px;height:26px;border-radius:50%;background:var(--mde-amarillo);
+  color:#5C4400;font-weight:900;font-size:13px;box-shadow:0 3px 8px rgba(201,154,0,.35);
+  transition:transform .25s,background-color .15s,color .15s}
+.toggle-extra[open] summary::after{transform:rotate(-180deg);background-color:var(--mde-amarillo-osc);color:#fff}
 .toggle-extra .direccion-partes{margin:0 22px 20px}
 
 details.card summary{cursor:pointer;list-style:none}
@@ -234,6 +240,24 @@ details.card[open] summary h2::before{content:"–  "}
   box-shadow:0 0 0 3px rgba(11,111,168,.15)}
 @media (max-width:480px){.latlon-mapa{position:static;margin-bottom:10px;justify-content:center}}
 
+/* panel fijo del mismo ancho del mapa, encima de el, que muestra la info
+   de la UDS sobre la que se pasa el mouse -- reemplaza al tooltip
+   flotante de Leaflet (bindTooltip) para que la posicion/recorte del
+   texto no dependa de en que parte del mapa o a que zoom quede el punto
+   (un tooltip pegado al marcador se puede salir del recuadro cerca de un
+   borde). altura minima fija para que el mapa no salte de posicion cada
+   vez que se pasa de un punto sin datos a uno con datos. */
+.info-uds{min-height:92px;background:var(--sunk);border:1.5px solid var(--rule2);
+  border-radius:var(--radio-sm);padding:12px 16px;margin-bottom:14px;
+  display:flex;flex-direction:column;justify-content:center;overflow-y:auto}
+.info-uds-vacio{margin:0;font-size:12.5px;color:var(--ink3);font-weight:600;line-height:1.5}
+.info-uds-nombre{font-size:14.5px;font-weight:900;color:var(--icbf-verde-osc);
+  font-family:var(--display);margin-bottom:6px}
+.info-uds-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:4px 18px}
+.info-uds-grid div{font-size:12px;color:var(--ink);font-weight:600;line-height:1.4}
+.info-uds-grid span{display:block;font-size:9.5px;font-weight:800;color:var(--ink3);
+  text-transform:uppercase;letter-spacing:.5px}
+
 #mapaCerc{height:460px;border-radius:var(--radio);overflow:hidden;border:4px solid #fff;
   box-shadow:var(--shadow)}
 @media (max-width:1150px){#mapaCerc{height:420px}}
@@ -348,6 +372,9 @@ footer.build .autoria{display:inline-block;margin-top:12px;font-size:10.5px;font
 
     <div class="panel-mapa">
       <div class="card">
+        <div class="info-uds" id="infoUds">
+          <p class="info-uds-vacio">Pasa el cursor sobre un punto del mapa para ver aquí su información — nombre, código, entidad, contrato, dirección, teléfono, servicio y cupos disponibles.</p>
+        </div>
         <div class="mapa-wrap">
           <div id="mapaCerc"></div>
           <div class="latlon-mapa">
@@ -453,6 +480,26 @@ function chipCupos(p) {
   return d > 0
     ? '<span class="chip-cupos con">' + mil(d) + " disponibles</span>"
     : '<span class="chip-cupos sin">Sin cupos</span>';
+}
+
+const INFO_UDS_VACIO = '<p class="info-uds-vacio">Pasa el cursor sobre un punto del mapa para ver aquí su información — nombre, código, entidad, contrato, dirección, teléfono, servicio y cupos disponibles.</p>';
+// contenido del panel #infoUds (ver mas abajo, junto al mapa) al pasar el
+// mouse sobre una UDS -- reemplaza al tooltip flotante de Leaflet: al
+// tener ancho y posicion fijos (siempre el mismo panel, mismo ancho del
+// mapa) no se recorta ni se reacomoda segun donde caiga el punto o el
+// zoom, como si le pasaba a un tooltip pegado al marcador cerca de un
+// borde del mapa.
+function contenidoInfoUds(p) {
+  return '<div class="info-uds-nombre">' + esc(p.n || "(sin nombre)") + "</div>" +
+    '<div class="info-uds-grid">' +
+    "<div><span>Código</span>" + esc(p.id || "—") + "</div>" +
+    "<div><span>Entidad</span>" + esc(p.en || "—") + "</div>" +
+    (p.contrato ? "<div><span>Contrato</span>" + esc(p.contrato) + "</div>" : "") +
+    (p.dir ? "<div><span>Dirección</span>" + esc(p.dir) + "</div>" : "") +
+    (p.tel ? "<div><span>Tel</span>" + esc(p.tel) + "</div>" : "") +
+    (p.serv ? "<div><span>Servicio</span>" + esc(p.serv) + "</div>" : "") +
+    "<div><span>Cupos disponibles</span>" + mil(disponibles(p)) + "</div>" +
+    "</div>";
 }
 
 /* ---------------- tabla generica ordenable ---------------- */
@@ -842,6 +889,7 @@ function buscarYPintar() {
   RES_MARKERS.forEach(m => MAPA && MAPA.removeLayer(m));
   RES_MARKERS = [];
   MARCADOR_POR_ID = {};
+  if ($("#infoUds")) $("#infoUds").innerHTML = INFO_UDS_VACIO; // los marcadores viejos ya no existen, ningun hover en curso sigue siendo valido
   if (!PUNTO) {
     resWrap.innerHTML = '<p class="nota">Elige un municipio y marca un punto para ver las unidades de servicio más cercanas.</p>';
     sub.textContent = "";
@@ -904,21 +952,13 @@ function buscarYPintar() {
     items.forEach(({ p, d }) => {
       const color = colorCupos(p);
       const m = L.circleMarker([p.y, p.x], { radius: 6, color: "#fff", weight: 1.5, fillColor: color, fillOpacity: 0.9 }).addTo(MAPA);
-      // tooltip al pasar el mouse (resumen rapido, sin clic) -- distinto del
-      // popup de abajo (con clic, mas completo): nombre, codigo, entidad
-      // administradora, direccion, servicio y cupos disponibles, tal como
-      // vienen de la hoja CUENTAME del Excel fuente.
-      m.bindTooltip(
-        "<b>" + esc(p.n || "(sin nombre)") + "</b>" +
-        "Código: " + esc(p.id || "—") + "<br>" +
-        "Entidad: " + esc(p.en || "—") + "<br>" +
-        (p.contrato ? "Contrato: " + esc(p.contrato) + "<br>" : "") +
-        (p.dir ? "Dirección: " + esc(p.dir) + "<br>" : "") +
-        (p.tel ? "Tel: " + esc(p.tel) + "<br>" : "") +
-        (p.serv ? "Servicio: " + esc(p.serv) + "<br>" : "") +
-        "Cupos disponibles: " + mil(disponibles(p)),
-        { direction: "top", sticky: true, opacity: 0.97 }
-      );
+      // al pasar el mouse (resumen rapido, sin clic) se llena el panel fijo
+      // #infoUds, arriba del mapa -- ver contenidoInfoUds() e INFO_UDS_VACIO
+      // mas arriba para el porque de usar un panel fijo en vez de un
+      // tooltip flotante. Distinto del popup de abajo (con clic, mas
+      // completo, se abre sobre el mapa mismo).
+      m.on("mouseover", () => { $("#infoUds").innerHTML = contenidoInfoUds(p); });
+      m.on("mouseout", () => { $("#infoUds").innerHTML = INFO_UDS_VACIO; });
       m.bindPopup("<b>" + esc(p.n || "(sin nombre)") + "</b>" +
         (p.dir ? "<br>" + esc(p.dir) : "") +
         "<br>" + esc(p.mun || "—") + (p.co ? " · " + esc(p.co) : "") + (p.b ? " · " + esc(p.b) : "") +

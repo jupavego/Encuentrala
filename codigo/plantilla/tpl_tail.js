@@ -29,6 +29,26 @@ function chipCupos(p) {
     : '<span class="chip-cupos sin">Sin cupos</span>';
 }
 
+const INFO_UDS_VACIO = '<p class="info-uds-vacio">Pasa el cursor sobre un punto del mapa para ver aquí su información — nombre, código, entidad, contrato, dirección, teléfono, servicio y cupos disponibles.</p>';
+// contenido del panel #infoUds (ver mas abajo, junto al mapa) al pasar el
+// mouse sobre una UDS -- reemplaza al tooltip flotante de Leaflet: al
+// tener ancho y posicion fijos (siempre el mismo panel, mismo ancho del
+// mapa) no se recorta ni se reacomoda segun donde caiga el punto o el
+// zoom, como si le pasaba a un tooltip pegado al marcador cerca de un
+// borde del mapa.
+function contenidoInfoUds(p) {
+  return '<div class="info-uds-nombre">' + esc(p.n || "(sin nombre)") + "</div>" +
+    '<div class="info-uds-grid">' +
+    "<div><span>Código</span>" + esc(p.id || "—") + "</div>" +
+    "<div><span>Entidad</span>" + esc(p.en || "—") + "</div>" +
+    (p.contrato ? "<div><span>Contrato</span>" + esc(p.contrato) + "</div>" : "") +
+    (p.dir ? "<div><span>Dirección</span>" + esc(p.dir) + "</div>" : "") +
+    (p.tel ? "<div><span>Tel</span>" + esc(p.tel) + "</div>" : "") +
+    (p.serv ? "<div><span>Servicio</span>" + esc(p.serv) + "</div>" : "") +
+    "<div><span>Cupos disponibles</span>" + mil(disponibles(p)) + "</div>" +
+    "</div>";
+}
+
 /* ---------------- tabla generica ordenable ---------------- */
 function tabla(cols, filas, opt) {
   opt = opt || {};
@@ -416,6 +436,7 @@ function buscarYPintar() {
   RES_MARKERS.forEach(m => MAPA && MAPA.removeLayer(m));
   RES_MARKERS = [];
   MARCADOR_POR_ID = {};
+  if ($("#infoUds")) $("#infoUds").innerHTML = INFO_UDS_VACIO; // los marcadores viejos ya no existen, ningun hover en curso sigue siendo valido
   if (!PUNTO) {
     resWrap.innerHTML = '<p class="nota">Elige un municipio y marca un punto para ver las unidades de servicio más cercanas.</p>';
     sub.textContent = "";
@@ -478,21 +499,13 @@ function buscarYPintar() {
     items.forEach(({ p, d }) => {
       const color = colorCupos(p);
       const m = L.circleMarker([p.y, p.x], { radius: 6, color: "#fff", weight: 1.5, fillColor: color, fillOpacity: 0.9 }).addTo(MAPA);
-      // tooltip al pasar el mouse (resumen rapido, sin clic) -- distinto del
-      // popup de abajo (con clic, mas completo): nombre, codigo, entidad
-      // administradora, direccion, servicio y cupos disponibles, tal como
-      // vienen de la hoja CUENTAME del Excel fuente.
-      m.bindTooltip(
-        "<b>" + esc(p.n || "(sin nombre)") + "</b>" +
-        "Código: " + esc(p.id || "—") + "<br>" +
-        "Entidad: " + esc(p.en || "—") + "<br>" +
-        (p.contrato ? "Contrato: " + esc(p.contrato) + "<br>" : "") +
-        (p.dir ? "Dirección: " + esc(p.dir) + "<br>" : "") +
-        (p.tel ? "Tel: " + esc(p.tel) + "<br>" : "") +
-        (p.serv ? "Servicio: " + esc(p.serv) + "<br>" : "") +
-        "Cupos disponibles: " + mil(disponibles(p)),
-        { direction: "top", sticky: true, opacity: 0.97 }
-      );
+      // al pasar el mouse (resumen rapido, sin clic) se llena el panel fijo
+      // #infoUds, arriba del mapa -- ver contenidoInfoUds() e INFO_UDS_VACIO
+      // mas arriba para el porque de usar un panel fijo en vez de un
+      // tooltip flotante. Distinto del popup de abajo (con clic, mas
+      // completo, se abre sobre el mapa mismo).
+      m.on("mouseover", () => { $("#infoUds").innerHTML = contenidoInfoUds(p); });
+      m.on("mouseout", () => { $("#infoUds").innerHTML = INFO_UDS_VACIO; });
       m.bindPopup("<b>" + esc(p.n || "(sin nombre)") + "</b>" +
         (p.dir ? "<br>" + esc(p.dir) : "") +
         "<br>" + esc(p.mun || "—") + (p.co ? " · " + esc(p.co) : "") + (p.b ? " · " + esc(p.b) : "") +
