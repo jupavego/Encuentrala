@@ -49,7 +49,7 @@ select,input{font-family:var(--sans)}
    tablero quepa en el viewport. Resultados y Fuentes van debajo, a lo
    ancho, y la pagina hace scroll normal si hace falta (asi no toco lo
    viable en pantallas mas bajas ni obligo un layout rigido). */
-#app{max-width:1500px;margin:0 auto;padding:18px 22px 44px}
+#app{max-width:1500px;margin:0 auto;padding:18px 22px 28px}
 header.top{
   display:flex;align-items:center;gap:16px;flex-wrap:wrap;
   padding:26px 28px;margin:0 0 20px;color:#fff;position:relative;overflow:hidden;
@@ -282,8 +282,14 @@ dl.fuentes{margin:0}
 dl.fuentes dt{font-weight:800;color:var(--icbf-verde-osc);margin-top:16px;font-size:14.5px}
 dl.fuentes dt:first-child{margin-top:0}
 dl.fuentes dd{margin:4px 0 0;color:var(--ink2);line-height:1.6;font-weight:500}
-footer.build{text-align:center;color:var(--ink3);font-size:11.5px;padding:24px 0 4px;font-weight:700}
-footer.build .autoria{display:inline-block;margin-top:3px;font-size:10.5px;font-weight:600;opacity:.65}
+/* franja de borde a borde (full-bleed), aparte del contenedor #app
+   (max-width:1500px) que acota todo lo demas -- a pedido explicito, para
+   que el pie institucional se sienta como una barra propia, no como texto
+   centrado y angosto dentro de la misma columna del contenido. */
+footer.build{width:100%;background:var(--icbf-verde-suave);border-top:1px solid var(--rule2);
+  text-align:center;color:var(--ink2);font-size:12px;padding:22px 22px 26px;font-weight:700}
+footer.build .autoria{display:inline-block;margin-top:5px;font-size:10.5px;font-weight:600;
+  color:var(--ink3);opacity:.75}
 </style>
 </head>
 <body>
@@ -393,8 +399,9 @@ footer.build .autoria{display:inline-block;margin-top:3px;font-size:10.5px;font-
     <dl class="fuentes" id="fuentesDl"></dl>
   </details>
 
-  <footer class="build" id="pieBuild"></footer>
 </div>
+
+<footer class="build" id="pieBuild"></footer>
 
 <script>
 const D = __DATOS__;
