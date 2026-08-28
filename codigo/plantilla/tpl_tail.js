@@ -725,7 +725,9 @@ function init() {
     "<dt>Color de cada UDS (mapa, tabla y pines)</dt><dd>Refleja disponibilidad de cupos, no distancia: <b style=\"display:inline;font-weight:700;color:#5FA829\">verde</b> = tiene cupos disponibles (cupos contratados por encima de los atendidos), <b style=\"display:inline;font-weight:700;color:#D64545\">rojo</b> = sin cupos disponibles (llena o sobre-ejecutada). La cercanía (bandas/anillos) solo agrupa los resultados, no cambia su color.</dd>" +
     "<dt>Este sitio, en relación con el tablero de Medellín</dt><dd>Reutiliza la misma lógica de geocodificación, distancia (Haversine) y mapa del módulo \"Cercanía\" del tablero de Buen Comienzo Medellín, extendida a las " + mil(D.meta.n_uds) + " UDS de ICBF-Cuéntame en todo el departamento. No incluye las Sedes de Buen Comienzo (exclusivas de Medellín).</dd>";
 
-  $("#pieBuild").textContent = "Generado " + (D.build || "") + " · fuente: BD ANALISIS COBERTURA v21.xlsm";
+  $("#pieBuild").innerHTML =
+    esc("Generado " + (D.build || "") + " · fuente: BD ANALISIS COBERTURA v21.xlsm") +
+    '<br><span class="autoria">Desarrollado por Juan Pablo Velásquez Gómez</span>';
 }
 
 init();
