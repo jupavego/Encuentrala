@@ -343,7 +343,12 @@ function dibujarAnillos(bandas) {
       ? L.polygon([externo, circuloPuntos(lat, lon, radioInt)], { color: b.color, weight: 2, fillColor: b.fill, fillOpacity: b.fillOpacity })
       : L.circle([lat, lon], { radius: radioExt, color: b.color, weight: 2, fillColor: b.fill, fillOpacity: b.fillOpacity });
     anillo.addTo(MAPA);
-    anillo.bindTooltip(fmtDist(radioExt), { direction: "top" });
+    // el anclaje por defecto del tooltip de un circulo/poligono es su
+    // propio centro -- que es PUNTO, el mismo lugar donde esta el pin. Sin
+    // offset, la etiqueta de distancia queda tapando el pin apenas se
+    // pasa el mouse cerca. Con direction:"right" + offset se corre al
+    // lado, sin taparlo.
+    anillo.bindTooltip(fmtDist(radioExt), { direction: "right", offset: [30, 0] });
     ANILLOS.push(anillo);
   });
 }
