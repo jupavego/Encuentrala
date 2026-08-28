@@ -346,9 +346,10 @@ function dibujarAnillos(bandas) {
     // el anclaje por defecto del tooltip de un circulo/poligono es su
     // propio centro -- que es PUNTO, el mismo lugar donde esta el pin. Sin
     // offset, la etiqueta de distancia queda tapando el pin apenas se
-    // pasa el mouse cerca. Con direction:"right" + offset se corre al
-    // lado, sin taparlo.
-    anillo.bindTooltip(fmtDist(radioExt), { direction: "right", offset: [30, 0] });
+    // pasa el mouse cerca. direction:"bottom" + offset la corre debajo,
+    // sin taparlo; className:"tooltip-anillo" (CSS) le quita casi todo el
+    // padding para que ocupe lo minimo y no alcance a tapar UDS vecinas.
+    anillo.bindTooltip(fmtDist(radioExt), { direction: "bottom", offset: [0, 6], className: "tooltip-anillo" });
     ANILLOS.push(anillo);
   });
 }

@@ -314,6 +314,11 @@ details.card[open] summary h2::before{content:"–  "}
 .leaflet-tooltip{font-family:var(--sans);font-size:12.5px;line-height:1.55;color:var(--ink);
   padding:9px 12px;border-radius:10px;border:1.5px solid var(--rule2);box-shadow:var(--shadow)}
 .leaflet-tooltip b{display:block;margin-bottom:3px;font-weight:800;color:var(--icbf-verde-osc)}
+/* etiqueta de distancia de cada anillo (333 m, 1 km...): casi sin padding
+   a proposito, para que su recuadro ocupe lo minimo posible sobre el mapa
+   y no llegue a tapar una UDS vecina. */
+.leaflet-tooltip.tooltip-anillo{padding:1px 5px;font-size:10.5px;font-weight:700;
+  border-radius:5px;line-height:1.3}
 
 .grupo-banda{background:var(--card);border:2px solid var(--rule);
   border-radius:var(--radio-sm);box-shadow:none;overflow:hidden;transition:border-color .15s}
@@ -842,9 +847,10 @@ function dibujarAnillos(bandas) {
     // el anclaje por defecto del tooltip de un circulo/poligono es su
     // propio centro -- que es PUNTO, el mismo lugar donde esta el pin. Sin
     // offset, la etiqueta de distancia queda tapando el pin apenas se
-    // pasa el mouse cerca. Con direction:"right" + offset se corre al
-    // lado, sin taparlo.
-    anillo.bindTooltip(fmtDist(radioExt), { direction: "right", offset: [30, 0] });
+    // pasa el mouse cerca. direction:"bottom" + offset la corre debajo,
+    // sin taparlo; className:"tooltip-anillo" (CSS) le quita casi todo el
+    // padding para que ocupe lo minimo y no alcance a tapar UDS vecinas.
+    anillo.bindTooltip(fmtDist(radioExt), { direction: "bottom", offset: [0, 6], className: "tooltip-anillo" });
     ANILLOS.push(anillo);
   });
 }
