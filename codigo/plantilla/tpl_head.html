@@ -102,6 +102,10 @@ header.top .sub{
 .toggle-extra[open] summary::before{content:"–  "}
 .toggle-extra .direccion-partes{margin-top:8px}
 
+details.card summary{cursor:pointer;list-style:none}
+details.card summary::-webkit-details-marker{display:none}
+details.card summary h2::before{content:"+  ";color:var(--icbf-verde)}
+details.card[open] summary h2::before{content:"–  "}
 .card #fuentesDl{margin-top:14px}
 
 .card{background:var(--card);border:1px solid var(--rule);border-top:5px solid var(--icbf-verde);
@@ -375,10 +379,10 @@ footer.build .autoria{display:inline-block;margin-top:3px;font-size:10.5px;font-
     <div id="resultados"></div>
   </div>
 
-  <div class="card">
-    <h2>Fuentes y metodología</h2>
+  <details class="card">
+    <summary><h2 style="display:inline">Fuentes y metodología</h2></summary>
     <dl class="fuentes" id="fuentesDl"></dl>
-  </div>
+  </details>
 
   <footer class="build" id="pieBuild"></footer>
 </div>

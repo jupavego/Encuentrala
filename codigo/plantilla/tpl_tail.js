@@ -508,7 +508,12 @@ function buscarYPintar() {
         // de Resultados justo despues de resaltarFila() y deja el punto de
         // referencia saltando a la UDS en la que se hizo clic.
         L.DomEvent.stopPropagation(e);
-        if (m.isPopupOpen()) m.closePopup(); else m.openPopup();
+        // el clic queda reservado para ir a la fila (resaltarFila) -- el
+        // resumen rapido ya lo cubre el tooltip al pasar el mouse (hover),
+        // sin competir con un popup que se queda abierto hasta cerrarlo a
+        // mano. bindPopup() se deja igual mas abajo porque abrirPopup()
+        // (camino inverso: clic en la fila -> se abre en el mapa) todavia
+        // lo necesita.
         resaltarFila(p.id);
       });
       if (p.id != null) MARCADOR_POR_ID[p.id] = m;

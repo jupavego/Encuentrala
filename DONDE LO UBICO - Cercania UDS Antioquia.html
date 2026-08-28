@@ -102,6 +102,10 @@ header.top .sub{
 .toggle-extra[open] summary::before{content:"–  "}
 .toggle-extra .direccion-partes{margin-top:8px}
 
+details.card summary{cursor:pointer;list-style:none}
+details.card summary::-webkit-details-marker{display:none}
+details.card summary h2::before{content:"+  ";color:var(--icbf-verde)}
+details.card[open] summary h2::before{content:"–  "}
 .card #fuentesDl{margin-top:14px}
 
 .card{background:var(--card);border:1px solid var(--rule);border-top:5px solid var(--icbf-verde);
@@ -375,10 +379,10 @@ footer.build .autoria{display:inline-block;margin-top:3px;font-size:10.5px;font-
     <div id="resultados"></div>
   </div>
 
-  <div class="card">
-    <h2>Fuentes y metodología</h2>
+  <details class="card">
+    <summary><h2 style="display:inline">Fuentes y metodología</h2></summary>
     <dl class="fuentes" id="fuentesDl"></dl>
-  </div>
+  </details>
 
   <footer class="build" id="pieBuild"></footer>
 </div>
@@ -895,7 +899,12 @@ function buscarYPintar() {
         // de Resultados justo despues de resaltarFila() y deja el punto de
         // referencia saltando a la UDS en la que se hizo clic.
         L.DomEvent.stopPropagation(e);
-        if (m.isPopupOpen()) m.closePopup(); else m.openPopup();
+        // el clic queda reservado para ir a la fila (resaltarFila) -- el
+        // resumen rapido ya lo cubre el tooltip al pasar el mouse (hover),
+        // sin competir con un popup que se queda abierto hasta cerrarlo a
+        // mano. bindPopup() se deja igual mas abajo porque abrirPopup()
+        // (camino inverso: clic en la fila -> se abre en el mapa) todavia
+        // lo necesita.
         resaltarFila(p.id);
       });
       if (p.id != null) MARCADOR_POR_ID[p.id] = m;
