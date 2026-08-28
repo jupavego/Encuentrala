@@ -249,6 +249,11 @@ table.tabla tbody td{padding:10px;border-bottom:1px solid var(--rule);font-size:
 table.tabla tbody tr:hover{background:var(--sunk)}
 table.tabla td.num{font-family:var(--mono);text-align:right}
 table.tabla tbody tr.fila-clicable{cursor:pointer}
+/* flash al hacer clic en un punto del mapa (ver resaltarFila) -- la
+   transicion queda declarada siempre en la fila, asi que quitar la clase
+   despues del timeout la hace desvanecerse sola de vuelta a su color base. */
+table.tabla tbody tr{transition:background .8s ease}
+table.tabla tbody tr.fila-resaltada{background:var(--mde-amarillo) !important}
 .chip-cupos{display:inline-block;padding:3px 12px;border-radius:999px;font-size:11px;font-weight:800;color:#fff}
 .chip-cupos.con{background:var(--icbf-verde)}
 .chip-cupos.sin{background:var(--rojo)}

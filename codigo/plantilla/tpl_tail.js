@@ -64,6 +64,7 @@ function tabla(cols, filas, opt) {
     const tbody = el("tbody");
     filasOrd.forEach(f => {
       const tr = el("tr");
+      if (opt.getId) tr.dataset.id = String(opt.getId(f));
       if (opt.onRowClick) { tr.classList.add("fila-clicable"); tr.onclick = () => opt.onRowClick(f); }
       cols.forEach(c => {
         const td = el("td", c.numeric === false ? null : "num", c.fmt ? c.fmt(f) : esc(c.get(f)));
@@ -298,9 +299,29 @@ function abrirPopup(id) {
   const m = MARCADOR_POR_ID[id];
   if (!m || !MAPA) return;
   const div = $("#mapaCerc");
-  if (div) div.scrollIntoView({ behavior: "smooth", block: "center" });
+  // scroll instantaneo, no "smooth": el scroll animado por el navegador
+  // depende de un loop interno tipo rAF que en este sitio ya se sabe que
+  // se puede congelar si la pestana pierde foco a medio salto (mismo
+  // gotcha que animarCaidaPin, ver arriba) -- mas vale un salto seco que
+  // uno que a veces simplemente no ocurre.
+  if (div) div.scrollIntoView({ block: "center" });
   MAPA.setView(m.getLatLng(), Math.max(MAPA.getZoom(), 15), { animate: false });
   m.openPopup();
+}
+
+// camino inverso a abrirPopup(): clic en un punto del mapa -> ubica su fila
+// en "Resultados" (id != null, puesto por tabla() via opt.getId), abre su
+// grupo de banda si estaba colapsado, hace scroll y la resalta un momento.
+function resaltarFila(id) {
+  if (id == null) return;
+  const tr = Array.from(document.querySelectorAll("#resultados tr[data-id]"))
+    .find(t => t.dataset.id === String(id));
+  if (!tr) return;
+  const grupo = tr.closest("details.grupo-banda");
+  if (grupo && !grupo.open) grupo.open = true;
+  tr.scrollIntoView({ block: "center" }); // ver nota de scroll instantaneo en abrirPopup()
+  tr.classList.add("fila-resaltada");
+  setTimeout(() => tr.classList.remove("fila-resaltada"), 1800);
 }
 
 function pintarLeyendaCupos() {
@@ -381,7 +402,7 @@ function buscarYPintar() {
         "</span>";
       det.appendChild(sum);
       const cuerpo = el("div", "gb-cuerpo");
-      cuerpo.appendChild(tabla(cols, g.items, { sortCol: 10, sortAsc: true, onRowClick: x => abrirPopup(x.p.id) }));
+      cuerpo.appendChild(tabla(cols, g.items, { sortCol: 10, sortAsc: true, getId: x => x.p.id, onRowClick: x => abrirPopup(x.p.id) }));
       det.appendChild(cuerpo);
       resWrap.appendChild(det);
     });
@@ -400,7 +421,10 @@ function buscarYPintar() {
         "<br>Cupos: " + mil(p.cu) + " · Atendidos: " + mil(p.at) + " · " + chipCupos(p) +
         "<br>" + fmtDist(d));
       m.off("click");
-      m.on("click", () => { if (m.isPopupOpen()) m.closePopup(); else m.openPopup(); });
+      m.on("click", () => {
+        if (m.isPopupOpen()) m.closePopup(); else m.openPopup();
+        resaltarFila(p.id);
+      });
       if (p.id != null) MARCADOR_POR_ID[p.id] = m;
       RES_MARKERS.push(m);
     });
