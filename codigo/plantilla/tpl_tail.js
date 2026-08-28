@@ -41,12 +41,29 @@ function contenidoInfoUds(p) {
     '<div class="info-uds-grid">' +
     "<div><span>Código</span>" + esc(p.id || "—") + "</div>" +
     (p.contrato ? "<div><span>Contrato</span>" + esc(p.contrato) + "</div>" : "") +
+    (p.serv ? '<div class="ancho"><span>Servicio</span>' + esc(p.serv) + "</div>" : "") +
     '<div class="full"><span>Entidad</span>' + esc(p.en || "—") + "</div>" +
     (p.dir ? "<div><span>Dirección</span>" + esc(p.dir) + "</div>" : "") +
     (p.tel ? "<div><span>Tel</span>" + esc(p.tel) + "</div>" : "") +
-    (p.serv ? "<div><span>Servicio</span>" + esc(p.serv) + "</div>" : "") +
     "<div><span>Cupos disponibles</span>" + mil(disponibles(p)) + "</div>" +
     "</div>";
+}
+// #infoUds es de altura FIJA (no crece con el contenido, ver CSS -- eso
+// es justo lo que evita el parpadeo del hover) pero el contenido varia
+// mucho: hay entidades contratistas y direcciones reales en la base
+// fuente de mas de 100-190 caracteres, imposibles de acotar de antemano
+// solo con CSS estatico sin terminar en scroll o texto cortado. Aqui se
+// pinta el contenido y, si no entra completo en la altura fija, se
+// achica la letra en hasta 2 escalones (clases .compacto/.muy-compacto,
+// ver CSS) hasta que quepa sin scroll.
+function mostrarInfoUds(p) {
+  const panel = $("#infoUds");
+  panel.classList.remove("compacto", "muy-compacto");
+  panel.innerHTML = contenidoInfoUds(p);
+  if (panel.scrollHeight > panel.clientHeight) {
+    panel.classList.add("compacto");
+    if (panel.scrollHeight > panel.clientHeight) panel.classList.add("muy-compacto");
+  }
 }
 
 /* ---------------- tabla generica ordenable ---------------- */
@@ -270,7 +287,7 @@ function initMapaBase() {
   const medellin = D.municipios.find(m => m.nombre === "MEDELLIN");
   PUNTO = medellin ? { lat: medellin.centro[0], lon: medellin.centro[1] } : { lat: (bb[1] + bb[3]) / 2, lon: (bb[0] + bb[2]) / 2 };
   colocarPin(false, true);
-  buscarYPintar();
+  buscarYPintar(true); // mantenerVista=true: no reencuadrar a los anillos, se queda viendo el departamento completo
 }
 
 function colocarPin(zoomCerca, mantenerVista) {
@@ -430,13 +447,16 @@ function sincronizarMunicipioConPunto() {
   dibujarPoligonoMunicipio(); // solo redibuja el contorno resaltado, no mueve ni hace zoom del mapa
 }
 
-function buscarYPintar() {
+function buscarYPintar(mantenerVista) {
   const resWrap = $("#resultados");
   const sub = $("#subResultados");
   RES_MARKERS.forEach(m => MAPA && MAPA.removeLayer(m));
   RES_MARKERS = [];
   MARCADOR_POR_ID = {};
-  if ($("#infoUds")) $("#infoUds").innerHTML = INFO_UDS_VACIO; // los marcadores viejos ya no existen, ningun hover en curso sigue siendo valido
+  if ($("#infoUds")) { // los marcadores viejos ya no existen, ningun hover en curso sigue siendo valido
+    $("#infoUds").classList.remove("compacto", "muy-compacto");
+    $("#infoUds").innerHTML = INFO_UDS_VACIO;
+  }
   if (!PUNTO) {
     resWrap.innerHTML = '<p class="nota">Elige un municipio y marca un punto para ver las unidades de servicio más cercanas.</p>';
     sub.textContent = "";
@@ -450,6 +470,17 @@ function buscarYPintar() {
   const bandas = bandasDe(radioFinal);
   BANDAS_ACTUALES = bandas;
   dibujarAnillos(bandas);
+  // el zoom fijo de colocarPin (14/12) no tiene en cuenta que radioFinal es
+  // adaptativo (500 m a 100 km, ver buscarCercanas) -- en una zona rural
+  // dispersa ese zoom fijo dejaba los anillos mas exteriores bien afuera
+  // del recuadro visible. Reencuadrar al anillo mas externo (ANILLOS[0]:
+  // dibujarAnillos los push de afuera hacia adentro) muestra siempre el
+  // radio de busqueda completo, y fitBounds ya elige el zoom mas cercano
+  // posible que lo deje entero a la vista -- ni mas lejos ni mas cerca de
+  // lo necesario.
+  if (MAPA && ANILLOS.length && !mantenerVista) {
+    MAPA.fitBounds(ANILLOS[0].getBounds(), { padding: [24, 24], animate: false });
+  }
   sub.textContent = items.length
     ? items.length + (items.length === 1 ? " unidad de servicio" : " unidades de servicio") + " en un radio de " + fmtDist(radioFinal)
     : "";
@@ -504,8 +535,12 @@ function buscarYPintar() {
       // mas arriba para el porque de usar un panel fijo en vez de un
       // tooltip flotante. Distinto del popup de abajo (con clic, mas
       // completo, se abre sobre el mapa mismo).
-      m.on("mouseover", () => { $("#infoUds").innerHTML = contenidoInfoUds(p); });
-      m.on("mouseout", () => { $("#infoUds").innerHTML = INFO_UDS_VACIO; });
+      m.on("mouseover", () => mostrarInfoUds(p));
+      m.on("mouseout", () => {
+        const panel = $("#infoUds");
+        panel.classList.remove("compacto", "muy-compacto");
+        panel.innerHTML = INFO_UDS_VACIO;
+      });
       m.bindPopup("<b>" + esc(p.n || "(sin nombre)") + "</b>" +
         (p.dir ? "<br>" + esc(p.dir) : "") +
         "<br>" + esc(p.mun || "—") + (p.co ? " · " + esc(p.co) : "") + (p.b ? " · " + esc(p.b) : "") +
