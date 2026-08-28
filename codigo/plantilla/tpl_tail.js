@@ -358,6 +358,58 @@ function actualizarLatLon() {
   if (document.activeElement !== inputLon) inputLon.value = PUNTO.lon.toFixed(6);
 }
 
+/* ---------------- municipio <- punto (camino inverso a onMunicipioChange) --------------- */
+// ray-casting par/impar clasico; anillos combinados por XOR para soportar
+// huecos si algun poligono llegara a traerlos (ninguno de los 124 los
+// trae hoy, pero la fuente es un geojson externo, no hay garantia futura).
+function puntoEnAnillo(lat, lon, anillo) {
+  let dentro = false;
+  for (let i = 0, j = anillo.length - 1; i < anillo.length; j = i++) {
+    const yi = anillo[i][0], xi = anillo[i][1];
+    const yj = anillo[j][0], xj = anillo[j][1];
+    const cruza = (yi > lat) !== (yj > lat) && lon < (xj - xi) * (lat - yi) / (yj - yi) + xi;
+    if (cruza) dentro = !dentro;
+  }
+  return dentro;
+}
+function puntoEnPoligono(lat, lon, anillos) {
+  let dentro = false;
+  anillos.forEach(anillo => { if (puntoEnAnillo(lat, lon, anillo)) dentro = !dentro; });
+  return dentro;
+}
+// Medellin es la unica sin poligono navegable en esta fuente (ver
+// generar_datos_cercania.py): se usa su bbox como aproximacion razonable
+// nada mas para este chequeo, no para dibujar contorno ni para fitBounds.
+function municipioQueContiene(lat, lon) {
+  for (const m of D.municipios) {
+    if (m.poligono && puntoEnPoligono(lat, lon, m.poligono)) return m;
+  }
+  const medellin = D.municipios.find(m => m.nombre === "MEDELLIN");
+  if (medellin && lon >= medellin.bbox[0] && lon <= medellin.bbox[2] && lat >= medellin.bbox[1] && lat <= medellin.bbox[3]) {
+    return medellin;
+  }
+  return null;
+}
+// el filtro de municipio ya movia el pin (onMunicipioChange); esto hace el
+// camino contrario -- cada vez que el pin cambia de lugar por cualquier via
+// (clic en el mapa, arrastre, direccion encontrada, coordenadas escritas a
+// mano, o el pin por defecto en Medellin) el campo de municipio se pone al
+// dia solo, sin moverlo de nuevo ni relanzar la busqueda (ya se esta
+// corriendo desde dentro de buscarYPintar). Si el punto cae fuera de
+// cualquier poligono conocido (raro: solo pasa muy cerca de un borde, por
+// la simplificacion de los contornos) se deja el municipio que ya estaba.
+function sincronizarMunicipioConPunto() {
+  if (!PUNTO) return;
+  const detectado = municipioQueContiene(PUNTO.lat, PUNTO.lon);
+  if (!detectado || detectado.nombre === (MUNI && MUNI.nombre)) return;
+  MUNI = detectado;
+  $("#inputMunicipio").value = detectado.nombre;
+  const inputDir = $("#inputDir"), btnBuscar = $("#btnBuscar"), btnPartes = $("#btnBuscarPartes");
+  inputDir.disabled = false; btnBuscar.disabled = false; btnPartes.disabled = false;
+  inputDir.placeholder = "Dirección en " + detectado.nombre + ": Calle 45 # 23-10...";
+  dibujarPoligonoMunicipio(); // solo redibuja el contorno resaltado, no mueve ni hace zoom del mapa
+}
+
 function buscarYPintar() {
   const resWrap = $("#resultados");
   const sub = $("#subResultados");
@@ -372,6 +424,7 @@ function buscarYPintar() {
     return;
   }
   actualizarLatLon();
+  sincronizarMunicipioConPunto();
   const { items, radioFinal } = buscarCercanas(PUNTO.lat, PUNTO.lon);
   const bandas = bandasDe(radioFinal);
   BANDAS_ACTUALES = bandas;
@@ -425,6 +478,19 @@ function buscarYPintar() {
     items.forEach(({ p, d }) => {
       const color = colorCupos(p);
       const m = L.circleMarker([p.y, p.x], { radius: 6, color: "#fff", weight: 1.5, fillColor: color, fillOpacity: 0.9 }).addTo(MAPA);
+      // tooltip al pasar el mouse (resumen rapido, sin clic) -- distinto del
+      // popup de abajo (con clic, mas completo): nombre, codigo, entidad
+      // administradora, direccion, servicio y cupos disponibles, tal como
+      // vienen de la hoja CUENTAME del Excel fuente.
+      m.bindTooltip(
+        "<b>" + esc(p.n || "(sin nombre)") + "</b>" +
+        "Código: " + esc(p.id || "—") + "<br>" +
+        "Entidad: " + esc(p.en || "—") + "<br>" +
+        (p.dir ? "Dirección: " + esc(p.dir) + "<br>" : "") +
+        (p.serv ? "Servicio: " + esc(p.serv) + "<br>" : "") +
+        "Cupos disponibles: " + mil(disponibles(p)),
+        { direction: "top", sticky: true, opacity: 0.97 }
+      );
       m.bindPopup("<b>" + esc(p.n || "(sin nombre)") + "</b>" +
         (p.dir ? "<br>" + esc(p.dir) : "") +
         "<br>" + esc(p.mun || "—") + (p.co ? " · " + esc(p.co) : "") + (p.b ? " · " + esc(p.b) : "") +
@@ -669,10 +735,13 @@ function init() {
     if (!inputMuni.value.trim() && MUNI) onMunicipioChange(null); // borraron el campo del todo -> se deselecciona
     renderListaMunicipios(inputMuni.value);
   };
-  // al enfocar sin haber escrito nada se ve la lista completa (los 125
-  // municipios, con scroll) -- se comporta como el <select> de antes ademas
-  // de filtrar al escribir.
-  inputMuni.onfocus = () => renderListaMunicipios(inputMuni.value);
+  // al enfocar siempre se ve la lista completa (los 125 municipios, con
+  // scroll), incluso si ya hay un municipio elegido y su nombre completo
+  // esta escrito en el campo -- si no, filtrar por ese mismo texto solo
+  // mostraba esa unica coincidencia, obligando a borrar todo a mano antes
+  // de poder elegir uno distinto. select() de paso deja el texto
+  // seleccionado, listo para sobreescribirlo con solo empezar a escribir.
+  inputMuni.onfocus = () => { inputMuni.select(); renderListaMunicipios(""); };
   inputMuni.onkeydown = (e) => {
     if (e.key === "Enter") {
       const primero = $("#listaMunicipios .candidato");
@@ -746,7 +815,8 @@ function init() {
     "<dt>Este sitio, en relación con el tablero de Medellín</dt><dd>Reutiliza la misma lógica de geocodificación, distancia (Haversine) y mapa del módulo \"Cercanía\" del tablero de Buen Comienzo Medellín, extendida a las " + mil(D.meta.n_uds) + " UDS de ICBF-Cuéntame en todo el departamento. No incluye las Sedes de Buen Comienzo (exclusivas de Medellín).</dd>";
 
   $("#pieBuild").innerHTML =
-    esc("Generado " + (D.build || "") + " · fuente: BD ANALISIS COBERTURA v21.xlsm") +
+    esc("ICBF Regional Antioquia · Grupo Interno de Trabajo de Prevención - Primera Infancia") +
+    "<br>" + esc("Reporte de Unidades de Servicio Sistema de Información Cuéntame Agosto 2026") +
     '<br><span class="autoria">Desarrollado por Juan Pablo Velásquez Gómez</span>';
 }
 

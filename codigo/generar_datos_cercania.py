@@ -143,6 +143,7 @@ for r in rows:
         "b": txt(r, "Barrio UDS"),
         "dir": txt(r, "Dirección UDS"),
         "tel": txt(r, "Teléfono UDS"),
+        "serv": txt(r, "Nombre Servicio"),
         "cu": cupos,
         "at": atendidos,
         "clas": txt(r, "CLASIFICACIÓN COBERTURA"),

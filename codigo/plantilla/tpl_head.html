@@ -12,7 +12,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<title>Encuentrala· UDS más cercana (Antioquia)</title>
+<title>Encontrala· UDS más cercana (Antioquia)</title>
 <!-- favicon: mismo icono "Territorio + Infancia" de fuente/preview.html,
      con los colores ya resueltos a hex (var(--icbf-green) etc. no existen
      en el contexto aislado donde el navegador renderiza un favicon). -->
@@ -131,7 +131,13 @@ header.top .sub{
 .grupo-sel::after{content:"";position:absolute;right:20px;top:41px;width:9px;height:9px;
   border-right:2.5px solid var(--ink3);border-bottom:2.5px solid var(--ink3);
   transform:rotate(45deg);pointer-events:none}
-#listaMunicipios{position:absolute;top:100%;left:0;right:0;z-index:40;margin-top:6px;
+/* left/right en -22px (mismo valor que el padding horizontal de .card) para
+   que el desplegable llegue hasta el borde de la tarjeta, no solo el ancho
+   del input -- si se queda mas angosto que la tarjeta, el borde verde
+   redondeado de la tarjeta de abajo ("2. Marca el punto") asoma por los
+   costados mientras se solapan verticalmente (reportado como "se ve un
+   conflicto" entre el desplegable y esa tarjeta). */
+#listaMunicipios{position:absolute;top:100%;left:-22px;right:-22px;z-index:40;margin-top:6px;
   max-height:280px;overflow-y:auto;background:var(--card);border:2px solid var(--rule2);
   border-radius:var(--radio-sm);box-shadow:var(--shadow-lg)}
 #listaMunicipios:not(:empty){padding:6px}
@@ -216,6 +222,9 @@ header.top .sub{
   margin-right:6px;vertical-align:-1px;border:2px solid #fff;box-shadow:0 0 0 1.5px rgba(0,0,0,.15)}
 .leaflet-popup-content{font-family:var(--sans);font-size:13px}
 .leaflet-popup-content b{display:block;margin-bottom:2px;font-weight:800}
+.leaflet-tooltip{font-family:var(--sans);font-size:12.5px;line-height:1.55;color:var(--ink);
+  padding:9px 12px;border-radius:10px;border:1.5px solid var(--rule2);box-shadow:var(--shadow)}
+.leaflet-tooltip b{display:block;margin-bottom:3px;font-weight:800;color:var(--icbf-verde-osc)}
 
 .grupo-banda{background:var(--card);border:2px solid var(--rule);
   border-radius:var(--radio-sm);box-shadow:none;overflow:hidden;transition:border-color .15s}
@@ -270,7 +279,7 @@ footer.build .autoria{display:inline-block;margin-top:3px;font-size:10.5px;font-
 <div id="app">
   <header class="top">
     <div>
-      <h1>Encuentrala · UDS más cercana</h1>
+      <h1>Encontrala · UDS más cercana</h1>
       <div class="sub">Unidades de Servicio ICBF (Cuéntame) activas en los 125 municipios de Antioquia</div>
     </div>
   </header>
