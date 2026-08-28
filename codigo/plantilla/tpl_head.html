@@ -287,8 +287,16 @@ dl.fuentes dd{margin:4px 0 0;color:var(--ink2);line-height:1.6;font-weight:500}
    que el pie institucional se sienta como una barra propia, no como texto
    centrado y angosto dentro de la misma columna del contenido. */
 footer.build{width:100%;background:var(--icbf-verde-suave);border-top:1px solid var(--rule2);
-  text-align:center;color:var(--ink2);font-size:12px;padding:22px 22px 26px;font-weight:700}
-footer.build .autoria{display:inline-block;margin-top:5px;font-size:10.5px;font-weight:600;
+  text-align:center;padding:26px 22px 30px}
+/* las dos lineas institucionales, agrandadas y con tracking (letter-
+   spacing) para que reclamen visiblemente el ancho completo de la franja
+   -- a pedido explicito, en vez de quedar como texto chico flotando en
+   una isla centrada con mucho verde vacio a los costados. */
+footer.build .linea-inst{display:block;font-size:20px;font-weight:900;letter-spacing:1.1px;
+  color:var(--icbf-verde-osc);font-family:var(--display);text-transform:uppercase}
+footer.build .linea-reporte{display:block;margin-top:7px;font-size:15.5px;font-weight:700;
+  letter-spacing:.3px;color:var(--ink2)}
+footer.build .autoria{display:inline-block;margin-top:12px;font-size:10.5px;font-weight:600;
   color:var(--ink3);opacity:.75}
 </style>
 </head>
