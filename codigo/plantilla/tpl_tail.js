@@ -479,7 +479,15 @@ function buscarYPintar(mantenerVista) {
   // posible que lo deje entero a la vista -- ni mas lejos ni mas cerca de
   // lo necesario.
   if (MAPA && ANILLOS.length && !mantenerVista) {
-    MAPA.fitBounds(ANILLOS[0].getBounds(), { padding: [24, 24], animate: false });
+    // fitBounds elige el mayor zoom ENTERO donde el anillo entra completo
+    // sin recortarse ni un pixel -- eso deja margen de sobra (reportado:
+    // "el zoom... aguanta otro scroll de zoom mas", es decir, se podia
+    // acercar un nivel mas y el anillo se seguia viendo bien). +1 nivel
+    // de zoom despues del fitBounds, mismo centro: un poco mas cerca de
+    // lo estrictamente necesario para que quepa, sin llegar a un zoom
+    // exagerado.
+    MAPA.fitBounds(ANILLOS[0].getBounds(), { padding: [6, 6], animate: false });
+    MAPA.setZoom(MAPA.getZoom() + 1, { animate: false });
   }
   sub.textContent = items.length
     ? items.length + (items.length === 1 ? " unidad de servicio" : " unidades de servicio") + " en un radio de " + fmtDist(radioFinal)
