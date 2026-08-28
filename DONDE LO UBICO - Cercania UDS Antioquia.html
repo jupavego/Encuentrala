@@ -253,36 +253,48 @@ details.card[open] summary h2::before{content:"–  "}
    usuario. Con altura fija el mapa nunca se mueve al pasar el mouse;
    overflow-y:auto es solo la salvaguarda por si algun texto excede esa
    altura. */
-.info-uds{height:200px;background:var(--sunk);border:1.5px solid var(--rule2);
-  border-radius:var(--radio-sm);padding:10px 16px;margin-bottom:14px;
+.info-uds{height:96px;background:var(--sunk);border:1.5px solid var(--rule2);
+  border-radius:var(--radio-sm);padding:7px 14px;margin-bottom:14px;
   display:flex;flex-direction:column;justify-content:center;overflow:hidden}
 .info-uds-vacio{margin:0;font-size:12.5px;color:var(--ink3);font-weight:600;line-height:1.5}
+/* la etiqueta ("UDS", "Código", etc.) va EN LINEA con su valor, no encima
+   -- antes cada campo eran 2 lineas (etiqueta arriba, valor abajo);
+   ponerlas en la misma linea corta el alto del bloque de datos casi a la
+   mitad. Junto con el ancho completo de Servicio/Entidad (ver .full) es
+   lo que de verdad libera espacio, no achicar la letra. */
 .info-uds-nombre{font-size:13.5px;font-weight:900;color:var(--icbf-verde-osc);
-  font-family:var(--display);margin-bottom:4px;line-height:1.25}
-.info-uds-nombre span{display:block;font-size:9px;font-weight:800;color:var(--ink3);
-  text-transform:uppercase;letter-spacing:.5px;font-family:var(--sans);margin-bottom:1px}
-.info-uds-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:3px 16px}
-.info-uds-grid div{font-size:11px;color:var(--ink);font-weight:600;line-height:1.3}
+  font-family:var(--display);margin-bottom:3px;line-height:1.2}
+.info-uds-nombre span{font-size:9px;font-weight:800;color:var(--ink3);
+  text-transform:uppercase;letter-spacing:.5px;font-family:var(--sans);margin-right:6px}
+.info-uds-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1px 16px}
+.info-uds-grid div{font-size:11px;color:var(--ink);font-weight:600;line-height:1.35}
 .info-uds-grid .full{grid-column:1/-1}
+.info-uds-grid span{font-size:9px;font-weight:800;color:var(--ink3);
+  text-transform:uppercase;letter-spacing:.5px;margin-right:4px}
 /* la caja de arriba es de ALTURA FIJA a proposito (evita el parpadeo del
    hover, ver mas arriba) pero el contenido es variable -- hay entidades
    contratistas de mas de 120 caracteres y direcciones reales de hasta
    ~195 en la base fuente, imposibles de acotar de antemano solo con CSS
    sin terminar con scroll o texto cortado. mostrarInfoUds() (tpl_tail.js)
    mide si el contenido entra despues de pintarlo y, si no, agrega estas
-   clases para achicar la letra en 1 o 2 escalones hasta que quepa
+   clases para achicar la letra en hasta 3 escalones hasta que quepa
    completo, sin scroll. */
 .info-uds.compacto .info-uds-nombre{font-size:12px;margin-bottom:2px}
 .info-uds.compacto .info-uds-nombre span{font-size:8px}
-.info-uds.compacto .info-uds-grid{gap:2px 12px}
-.info-uds.compacto .info-uds-grid div{font-size:9.5px;line-height:1.2}
+.info-uds.compacto .info-uds-grid{gap:1px 12px}
+.info-uds.compacto .info-uds-grid div{font-size:9.5px;line-height:1.25}
 .info-uds.compacto .info-uds-grid span{font-size:8px}
-.info-uds.muy-compacto .info-uds-nombre{font-size:11px;margin-bottom:1px}
-.info-uds.muy-compacto .info-uds-grid{gap:1px 10px}
-.info-uds.muy-compacto .info-uds-grid div{font-size:8.5px;line-height:1.15}
-.info-uds.muy-compacto .info-uds-grid span{font-size:7.5px}
-.info-uds-grid span{display:block;font-size:9px;font-weight:800;color:var(--ink3);
-  text-transform:uppercase;letter-spacing:.5px}
+.info-uds.muy-compacto .info-uds-nombre{font-size:10.5px;margin-bottom:1px;line-height:1.1}
+.info-uds.muy-compacto .info-uds-nombre span{font-size:7.5px}
+.info-uds.muy-compacto .info-uds-grid{gap:0 8px}
+.info-uds.muy-compacto .info-uds-grid div{font-size:8px;line-height:1.15}
+.info-uds.muy-compacto .info-uds-grid span{font-size:7px}
+.info-uds.super-compacto{padding:4px 12px}
+.info-uds.super-compacto .info-uds-nombre{font-size:9.5px;margin-bottom:0;line-height:1}
+.info-uds.super-compacto .info-uds-nombre span{display:none}
+.info-uds.super-compacto .info-uds-grid{gap:0 6px}
+.info-uds.super-compacto .info-uds-grid div{font-size:7.5px;line-height:1.05}
+.info-uds.super-compacto .info-uds-grid span{font-size:6.5px}
 
 #mapaCerc{height:460px;border-radius:var(--radio);overflow:hidden;border:4px solid #fff;
   box-shadow:var(--shadow)}
@@ -516,7 +528,7 @@ const INFO_UDS_VACIO = '<p class="info-uds-vacio">Pasa el cursor sobre un punto 
 // zoom, como si le pasaba a un tooltip pegado al marcador cerca de un
 // borde del mapa.
 function contenidoInfoUds(p) {
-  return '<div class="info-uds-nombre"><span>Unidad de Servicio (UDS)</span>' + esc(p.n || "(sin nombre)") + "</div>" +
+  return '<div class="info-uds-nombre"><span>UDS</span>' + esc(p.n || "(sin nombre)") + "</div>" +
     '<div class="info-uds-grid">' +
     "<div><span>Código</span>" + esc(p.id || "—") + "</div>" +
     (p.contrato ? "<div><span>Contrato</span>" + esc(p.contrato) + "</div>" : "") +
@@ -524,7 +536,7 @@ function contenidoInfoUds(p) {
     '<div class="full"><span>Entidad</span>' + esc(p.en || "—") + "</div>" +
     (p.dir ? "<div><span>Dirección</span>" + esc(p.dir) + "</div>" : "") +
     (p.tel ? "<div><span>Tel</span>" + esc(p.tel) + "</div>" : "") +
-    "<div><span>Cupos disponibles</span>" + mil(disponibles(p)) + "</div>" +
+    "<div><span>Cupos</span>" + mil(disponibles(p)) + " disponibles</div>" +
     "</div>";
 }
 // #infoUds es de altura FIJA (no crece con el contenido, ver CSS -- eso
@@ -537,11 +549,14 @@ function contenidoInfoUds(p) {
 // ver CSS) hasta que quepa sin scroll.
 function mostrarInfoUds(p) {
   const panel = $("#infoUds");
-  panel.classList.remove("compacto", "muy-compacto");
+  panel.classList.remove("compacto", "muy-compacto", "super-compacto");
   panel.innerHTML = contenidoInfoUds(p);
   if (panel.scrollHeight > panel.clientHeight) {
     panel.classList.add("compacto");
-    if (panel.scrollHeight > panel.clientHeight) panel.classList.add("muy-compacto");
+    if (panel.scrollHeight > panel.clientHeight) {
+      panel.classList.add("muy-compacto");
+      if (panel.scrollHeight > panel.clientHeight) panel.classList.add("super-compacto");
+    }
   }
 }
 
@@ -933,7 +948,7 @@ function buscarYPintar(mantenerVista) {
   RES_MARKERS = [];
   MARCADOR_POR_ID = {};
   if ($("#infoUds")) { // los marcadores viejos ya no existen, ningun hover en curso sigue siendo valido
-    $("#infoUds").classList.remove("compacto", "muy-compacto");
+    $("#infoUds").classList.remove("compacto", "muy-compacto", "super-compacto");
     $("#infoUds").innerHTML = INFO_UDS_VACIO;
   }
   if (!PUNTO) {
@@ -1025,7 +1040,7 @@ function buscarYPintar(mantenerVista) {
       m.on("mouseover", () => mostrarInfoUds(p));
       m.on("mouseout", () => {
         const panel = $("#infoUds");
-        panel.classList.remove("compacto", "muy-compacto");
+        panel.classList.remove("compacto", "muy-compacto", "super-compacto");
         panel.innerHTML = INFO_UDS_VACIO;
       });
       m.bindPopup("<b>" + esc(p.n || "(sin nombre)") + "</b>" +

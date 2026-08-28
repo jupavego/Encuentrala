@@ -37,7 +37,7 @@ const INFO_UDS_VACIO = '<p class="info-uds-vacio">Pasa el cursor sobre un punto 
 // zoom, como si le pasaba a un tooltip pegado al marcador cerca de un
 // borde del mapa.
 function contenidoInfoUds(p) {
-  return '<div class="info-uds-nombre"><span>Unidad de Servicio (UDS)</span>' + esc(p.n || "(sin nombre)") + "</div>" +
+  return '<div class="info-uds-nombre"><span>UDS</span>' + esc(p.n || "(sin nombre)") + "</div>" +
     '<div class="info-uds-grid">' +
     "<div><span>Código</span>" + esc(p.id || "—") + "</div>" +
     (p.contrato ? "<div><span>Contrato</span>" + esc(p.contrato) + "</div>" : "") +
@@ -45,7 +45,7 @@ function contenidoInfoUds(p) {
     '<div class="full"><span>Entidad</span>' + esc(p.en || "—") + "</div>" +
     (p.dir ? "<div><span>Dirección</span>" + esc(p.dir) + "</div>" : "") +
     (p.tel ? "<div><span>Tel</span>" + esc(p.tel) + "</div>" : "") +
-    "<div><span>Cupos disponibles</span>" + mil(disponibles(p)) + "</div>" +
+    "<div><span>Cupos</span>" + mil(disponibles(p)) + " disponibles</div>" +
     "</div>";
 }
 // #infoUds es de altura FIJA (no crece con el contenido, ver CSS -- eso
@@ -58,11 +58,14 @@ function contenidoInfoUds(p) {
 // ver CSS) hasta que quepa sin scroll.
 function mostrarInfoUds(p) {
   const panel = $("#infoUds");
-  panel.classList.remove("compacto", "muy-compacto");
+  panel.classList.remove("compacto", "muy-compacto", "super-compacto");
   panel.innerHTML = contenidoInfoUds(p);
   if (panel.scrollHeight > panel.clientHeight) {
     panel.classList.add("compacto");
-    if (panel.scrollHeight > panel.clientHeight) panel.classList.add("muy-compacto");
+    if (panel.scrollHeight > panel.clientHeight) {
+      panel.classList.add("muy-compacto");
+      if (panel.scrollHeight > panel.clientHeight) panel.classList.add("super-compacto");
+    }
   }
 }
 
@@ -454,7 +457,7 @@ function buscarYPintar(mantenerVista) {
   RES_MARKERS = [];
   MARCADOR_POR_ID = {};
   if ($("#infoUds")) { // los marcadores viejos ya no existen, ningun hover en curso sigue siendo valido
-    $("#infoUds").classList.remove("compacto", "muy-compacto");
+    $("#infoUds").classList.remove("compacto", "muy-compacto", "super-compacto");
     $("#infoUds").innerHTML = INFO_UDS_VACIO;
   }
   if (!PUNTO) {
@@ -546,7 +549,7 @@ function buscarYPintar(mantenerVista) {
       m.on("mouseover", () => mostrarInfoUds(p));
       m.on("mouseout", () => {
         const panel = $("#infoUds");
-        panel.classList.remove("compacto", "muy-compacto");
+        panel.classList.remove("compacto", "muy-compacto", "super-compacto");
         panel.innerHTML = INFO_UDS_VACIO;
       });
       m.bindPopup("<b>" + esc(p.n || "(sin nombre)") + "</b>" +
