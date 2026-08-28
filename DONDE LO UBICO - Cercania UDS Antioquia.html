@@ -73,6 +73,13 @@ header.top .sub{
 @media (max-width:1150px){.tablero{grid-template-columns:1fr}}
 
 .panel-controles{display:flex;flex-direction:column;gap:16px}
+/* los items flex se pintan como unidades atomicas en su propio orden --
+   por defecto el desplegable de municipio (position:absolute, z-index alto)
+   de la 1a tarjeta no logra dibujarse por encima de la 2a tarjeta, aunque
+   su z-index sea mayor, porque cada tarjeta es su propia "capa" de pintado.
+   Darle z-index explicito a la 1a tarjeta la saca de esa regla y la deja
+   apilarse por encima de la que sigue, como cualquier position:relative. */
+.panel-controles > .card:first-child{position:relative;z-index:2}
 
 .panel-mapa .card{padding:14px}
 
