@@ -1,0 +1,5 @@
+{
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/DONDE LO UBICO - Cercania UDS Antioquia.html" }
+  ]
+}
