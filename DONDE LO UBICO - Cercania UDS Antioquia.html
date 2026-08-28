@@ -253,8 +253,11 @@ details.card[open] summary h2::before{content:"–  "}
 .info-uds-vacio{margin:0;font-size:12.5px;color:var(--ink3);font-weight:600;line-height:1.5}
 .info-uds-nombre{font-size:14.5px;font-weight:900;color:var(--icbf-verde-osc);
   font-family:var(--display);margin-bottom:6px}
+.info-uds-nombre span{display:block;font-size:9.5px;font-weight:800;color:var(--ink3);
+  text-transform:uppercase;letter-spacing:.5px;font-family:var(--sans);margin-bottom:2px}
 .info-uds-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:4px 18px}
 .info-uds-grid div{font-size:12px;color:var(--ink);font-weight:600;line-height:1.4}
+.info-uds-grid .full{grid-column:1/-1}
 .info-uds-grid span{display:block;font-size:9.5px;font-weight:800;color:var(--ink3);
   text-transform:uppercase;letter-spacing:.5px}
 
@@ -490,11 +493,11 @@ const INFO_UDS_VACIO = '<p class="info-uds-vacio">Pasa el cursor sobre un punto 
 // zoom, como si le pasaba a un tooltip pegado al marcador cerca de un
 // borde del mapa.
 function contenidoInfoUds(p) {
-  return '<div class="info-uds-nombre">' + esc(p.n || "(sin nombre)") + "</div>" +
+  return '<div class="info-uds-nombre"><span>Unidad de Servicio (UDS)</span>' + esc(p.n || "(sin nombre)") + "</div>" +
     '<div class="info-uds-grid">' +
     "<div><span>Código</span>" + esc(p.id || "—") + "</div>" +
-    "<div><span>Entidad</span>" + esc(p.en || "—") + "</div>" +
     (p.contrato ? "<div><span>Contrato</span>" + esc(p.contrato) + "</div>" : "") +
+    '<div class="full"><span>Entidad</span>' + esc(p.en || "—") + "</div>" +
     (p.dir ? "<div><span>Dirección</span>" + esc(p.dir) + "</div>" : "") +
     (p.tel ? "<div><span>Tel</span>" + esc(p.tel) + "</div>" : "") +
     (p.serv ? "<div><span>Servicio</span>" + esc(p.serv) + "</div>" : "") +

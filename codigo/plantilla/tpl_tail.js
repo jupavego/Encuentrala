@@ -37,11 +37,11 @@ const INFO_UDS_VACIO = '<p class="info-uds-vacio">Pasa el cursor sobre un punto 
 // zoom, como si le pasaba a un tooltip pegado al marcador cerca de un
 // borde del mapa.
 function contenidoInfoUds(p) {
-  return '<div class="info-uds-nombre">' + esc(p.n || "(sin nombre)") + "</div>" +
+  return '<div class="info-uds-nombre"><span>Unidad de Servicio (UDS)</span>' + esc(p.n || "(sin nombre)") + "</div>" +
     '<div class="info-uds-grid">' +
     "<div><span>Código</span>" + esc(p.id || "—") + "</div>" +
-    "<div><span>Entidad</span>" + esc(p.en || "—") + "</div>" +
     (p.contrato ? "<div><span>Contrato</span>" + esc(p.contrato) + "</div>" : "") +
+    '<div class="full"><span>Entidad</span>' + esc(p.en || "—") + "</div>" +
     (p.dir ? "<div><span>Dirección</span>" + esc(p.dir) + "</div>" : "") +
     (p.tel ? "<div><span>Tel</span>" + esc(p.tel) + "</div>" : "") +
     (p.serv ? "<div><span>Servicio</span>" + esc(p.serv) + "</div>" : "") +
