@@ -1,0 +1,11 @@
+# insumos crudos (grandes y/o internos) -- no requeridos para correr el sitio,
+# sus datos derivados ya van embebidos en recursos/datos_cercania.json y en el HTML final
+fuente/
+
+# borradores de exploracion de estilo, no forman parte del sitio entregado
+tokyo_*.html
+muestra_tipografias.html
+
+# basura de SO
+Thumbs.db
+.DS_Store

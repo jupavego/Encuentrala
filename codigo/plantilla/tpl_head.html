@@ -1,0 +1,354 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<!-- Unica dependencia de internet de esta pagina: la tipografia (Google
+     Fonts), los tiles del mapa (OpenStreetMap) y el geocodificador de
+     direcciones (Nominatim). Sin conexion el mapa/buscador no cargan, pero
+     el punto se puede seguir marcando a mano una vez el mapa ya cargo. -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<title>Dónde lo ubico · UDS más cercana (Antioquia)</title>
+<!-- favicon: mismo icono "Territorio + Infancia" de fuente/preview.html,
+     con los colores ya resueltos a hex (var(--icbf-green) etc. no existen
+     en el contexto aislado donde el navegador renderiza un favicon). -->
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,__FAVICON_B64__">
+<style>
+:root{
+  /* colores institucionales ICBF -- de vuelta al frente: bloques solidos,
+     alto contraste. Optimista y directa (misma paleta que veniamos usando
+     antes del intento HUD, que quedo descartado). */
+  --icbf-verde:#5FA829; --icbf-verde-osc:#2F6B10; --icbf-verde-suave:#EAF5DC;
+  --mde-amarillo:#FFDC2F; --mde-amarillo-osc:#C99A00;
+  --azul:#0B6FA8; --violeta:#7B3FA0; --rojo:#D64545;
+
+  --paper:#FFFFFF; --card:#FFFFFF; --sunk:#F1F8E9;
+  --ink:#14210F; --ink2:#4A5C43; --ink3:#7C8B73;
+  --rule:#E3EFD6; --rule2:#C7DFAE;
+  --shadow:0 8px 20px rgba(95,168,41,.16);
+  --shadow-lg:0 16px 34px rgba(95,168,41,.22);
+  --radio:20px; --radio-sm:14px; --radio-pill:999px;
+  --sans:"Outfit","Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
+  --display:"Outfit","Inter",-apple-system,sans-serif;
+  --mono:ui-monospace,"SFMono-Regular","Cascadia Mono","Consolas",monospace;
+}
+html,body{background:var(--paper);color:var(--ink);font-family:var(--sans);margin:0}
+*,*::before,*::after{box-sizing:border-box}
+body{font-size:14.5px;line-height:1.55;font-weight:500}
+h1,h2,h3{margin:0;font-weight:900;font-family:var(--display);letter-spacing:-.2px}
+button{font:inherit;cursor:pointer}
+table{border-collapse:collapse;width:100%}
+select,input{font-family:var(--sans)}
+
+/* --------- disposicion compacta: municipio+busqueda a la izquierda, mapa
+   grande a la derecha, en la misma fila -- pero SIN forzar que todo el
+   tablero quepa en el viewport. Resultados y Fuentes van debajo, a lo
+   ancho, y la pagina hace scroll normal si hace falta (asi no toco lo
+   viable en pantallas mas bajas ni obligo un layout rigido). */
+#app{max-width:1500px;margin:0 auto;padding:18px 22px 44px}
+header.top{
+  display:flex;align-items:center;gap:16px;flex-wrap:wrap;
+  padding:26px 28px;margin:0 0 20px;color:#fff;position:relative;overflow:hidden;
+  background:linear-gradient(120deg,var(--icbf-verde-osc) 0%,var(--icbf-verde) 68%,#6FC534 100%);
+  border-radius:24px;
+  box-shadow:var(--shadow-lg);
+}
+header.top::after{
+  content:"";position:absolute;right:-32px;top:-32px;width:120px;height:120px;
+  border-radius:50%;background:var(--mde-amarillo);opacity:.95;pointer-events:none;
+}
+header.top h1{
+  font-size:25px;line-height:1.1;letter-spacing:-.4px;color:#fff;font-weight:900;position:relative;
+}
+header.top .sub{
+  font-size:12px;color:#EAF7DC;margin-top:5px;font-weight:600;font-family:var(--sans);
+  position:relative;
+}
+
+.tablero{display:grid;grid-template-columns:380px 1fr;gap:20px;align-items:start}
+@media (max-width:1150px){.tablero{grid-template-columns:1fr}}
+
+.panel-controles{display:flex;flex-direction:column;gap:16px}
+
+.panel-mapa .card{padding:14px}
+
+/* franja completa debajo del header, antes del tablero de dos columnas --
+   los dos metodos alternativos de ubicar el punto (direccion por partes,
+   coordenadas), siempre a la vista sin tener que entrar a la tarjeta
+   "2. Marca el punto". */
+.fila-toggles{display:flex;gap:8px 34px;flex-wrap:wrap;align-items:flex-start;
+  background:var(--card);border:1px solid var(--rule);border-radius:var(--radio-sm);
+  padding:14px 22px;margin:0 0 20px;box-shadow:var(--shadow)}
+.fila-toggles > .toggle-extra{flex:0 1 auto;margin:0}
+.fila-toggles > .toggle-extra[open]{flex:1 1 100%}
+.fila-toggles .direccion-partes{width:100%}
+.toggle-extra{margin:2px 0}
+.toggle-extra summary{cursor:pointer;font-size:12px;font-weight:700;color:var(--icbf-verde-osc);
+  list-style:none;padding:7px 0;user-select:none}
+.toggle-extra summary:hover{color:var(--icbf-verde)}
+.toggle-extra summary::-webkit-details-marker{display:none}
+.toggle-extra summary::before{content:"+  ";color:var(--icbf-verde);font-weight:900}
+.toggle-extra[open] summary::before{content:"–  "}
+.toggle-extra .direccion-partes{margin-top:8px}
+
+.card #fuentesDl{margin-top:14px}
+
+.card{background:var(--card);border:1px solid var(--rule);border-top:5px solid var(--icbf-verde);
+  border-radius:var(--radio);box-shadow:var(--shadow);padding:20px 22px;
+  transition:transform .15s,box-shadow .15s}
+.card:hover{transform:translateY(-3px);box-shadow:var(--shadow-lg)}
+.panel-mapa .card:hover{transform:none;box-shadow:var(--shadow)}
+.card + .card{margin-top:20px}
+.tablero + .card{margin-top:20px}
+.card h2{font-size:18px;margin-bottom:11px;color:var(--icbf-verde-osc);font-weight:900;letter-spacing:-.2px}
+.card h2 small{font-weight:600;color:var(--ink2);font-family:var(--sans);display:block;margin-top:5px;
+  letter-spacing:0;font-size:12px}
+.nota{font-size:12px;color:var(--ink3);line-height:1.5;margin:2px 2px 14px;font-weight:500}
+
+.grupo-sel{display:flex;flex-direction:column;gap:6px;margin-bottom:4px}
+.grupo-sel label{font-size:11px;font-weight:700;color:var(--ink2);text-transform:uppercase;letter-spacing:.8px}
+#selMunicipio{
+  width:100%;background:var(--sunk);border:2.5px solid var(--rule2);border-radius:var(--radio-pill);
+  padding:12px 20px;font-size:14.5px;color:var(--ink);font-weight:700;font-family:var(--display);
+  transition:border-color .15s,transform .1s;
+}
+#selMunicipio:hover{border-color:var(--icbf-verde)}
+#selMunicipio:focus{border-color:var(--icbf-verde);outline:none}
+
+.buscar-dir{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+.buscar-dir input{
+  flex:1 1 220px;background:var(--sunk);border:2.5px solid var(--rule2);border-radius:var(--radio-pill);
+  padding:11px 20px;font-size:14px;color:var(--ink);font-weight:600;font-family:inherit;
+  transition:border-color .15s;
+}
+.buscar-dir input:hover,.buscar-dir input:focus{border-color:var(--icbf-verde);outline:none}
+.buscar-dir input:disabled{opacity:.5}
+.buscar-dir button{
+  cursor:pointer;background:var(--icbf-verde);color:#fff;
+  border:none;border-radius:var(--radio-pill);box-shadow:0 6px 16px rgba(95,168,41,.32);
+  padding:11px 24px;font-size:14px;font-weight:800;font-family:var(--display);letter-spacing:-.1px;
+  transition:transform .15s,box-shadow .15s,background .15s;
+}
+.buscar-dir button:disabled{opacity:.4;cursor:not-allowed;box-shadow:none}
+.buscar-dir button:not(:disabled):hover{background:var(--icbf-verde-osc);transform:translateY(-2px);
+  box-shadow:0 10px 22px rgba(95,168,41,.4)}
+.buscar-dir button:not(:disabled):active{transform:translateY(0)}
+.candidatos{display:flex;flex-direction:column;gap:6px;margin-bottom:8px}
+.candidato{
+  cursor:pointer;text-align:left;background:var(--sunk);border:2px solid transparent;border-radius:var(--radio-sm);
+  padding:10px 16px;font-size:13px;color:var(--ink2);font-weight:600;font-family:inherit;
+  transition:border-color .15s,color .15s;
+}
+.candidato:hover{border-color:var(--icbf-verde);color:var(--icbf-verde-osc);background:var(--icbf-verde-suave)}
+
+.direccion-partes{display:flex;flex-wrap:wrap;gap:12px;align-items:end;
+  margin:6px 0 16px;padding:18px 20px;background:#FFFBEA;
+  border:2.5px solid var(--mde-amarillo);border-radius:var(--radio-sm)}
+.direccion-partes > div{flex:1 1 100px;min-width:90px}
+.direccion-partes .campo-ancho{flex:2 1 220px}
+.direccion-partes-titulo{display:none}
+.direccion-partes label{display:block;font-size:10.5px;font-weight:700;color:var(--ink2);
+  text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px;white-space:nowrap}
+.direccion-partes select,.direccion-partes input{
+  width:100%;background:#fff;border:2px solid var(--rule2);border-radius:var(--radio-pill);
+  padding:9px 15px;font-size:13.5px;color:var(--ink);font-weight:600;font-family:inherit;
+  transition:border-color .15s}
+.direccion-partes select:hover,.direccion-partes select:focus,
+.direccion-partes input:hover,.direccion-partes input:focus{border-color:var(--mde-amarillo-osc);outline:none}
+.direccion-partes button{
+  flex:0 0 auto;cursor:pointer;
+  background:var(--mde-amarillo);color:#5C4400;border:none;
+  border-radius:var(--radio-pill);padding:10px 24px;font-size:13.5px;
+  font-weight:800;font-family:var(--display);box-shadow:0 6px 14px rgba(201,154,0,.32);
+  white-space:nowrap;transition:transform .15s,box-shadow .15s}
+.direccion-partes button:hover{transform:translateY(-2px);box-shadow:0 10px 20px rgba(201,154,0,.4)}
+.direccion-partes button:active{transform:translateY(0)}
+@media (max-width:820px){.direccion-partes > div,.direccion-partes .campo-ancho{flex:1 1 100%}}
+
+/* lat/lon como overlay flotante en la esquina del mapa, en vez de un panel
+   aparte -- siempre refleja el pin actual y tambien sirve para moverlo:
+   sin boton, basta con cambiar el valor (evento "change"/Enter, ver JS) y
+   el pin salta ahi mismo. */
+.mapa-wrap{position:relative}
+.latlon-mapa{position:absolute;top:12px;right:12px;z-index:1000;
+  display:flex;gap:10px;align-items:end;background:#EAF4FB;backdrop-filter:blur(4px);
+  border:2.5px solid var(--azul);border-radius:16px;padding:10px 14px;
+  box-shadow:var(--shadow-lg)}
+.latlon-mapa div{display:flex;flex-direction:column}
+.latlon-mapa label{display:block;font-size:10px;font-weight:800;color:var(--azul);
+  text-transform:uppercase;letter-spacing:.7px;margin-bottom:4px}
+.latlon-mapa input{
+  width:88px;box-sizing:content-box;background:#fff;border:2px solid var(--azul);
+  border-radius:var(--radio-pill);padding:7px 11px;font-size:12.5px;color:var(--ink);
+  font-weight:700;font-family:var(--mono);transition:border-color .15s,box-shadow .15s}
+.latlon-mapa input:hover,.latlon-mapa input:focus{border-color:var(--icbf-verde-osc);outline:none;
+  box-shadow:0 0 0 3px rgba(11,111,168,.15)}
+@media (max-width:480px){.latlon-mapa{position:static;margin-bottom:10px;justify-content:center}}
+
+#mapaCerc{height:460px;border-radius:var(--radio);overflow:hidden;border:4px solid #fff;
+  box-shadow:var(--shadow)}
+@media (max-width:1150px){#mapaCerc{height:420px}}
+@media (max-width:820px){#mapaCerc{height:360px}}
+.leyenda-mapa{display:flex;gap:16px;align-items:center;flex-wrap:wrap;
+  font-size:12.5px;font-weight:700;color:var(--ink2);margin-top:14px}
+.leyenda-mapa .pt{display:inline-block;width:12px;height:12px;border-radius:50%;
+  margin-right:6px;vertical-align:-1px;border:2px solid #fff;box-shadow:0 0 0 1.5px rgba(0,0,0,.15)}
+.leaflet-popup-content{font-family:var(--sans);font-size:13px}
+.leaflet-popup-content b{display:block;margin-bottom:2px;font-weight:800}
+
+.grupo-banda{background:var(--card);border:2px solid var(--rule);
+  border-radius:var(--radio-sm);box-shadow:none;overflow:hidden;transition:border-color .15s}
+.grupo-banda:hover{border-color:var(--icbf-verde)}
+.grupo-banda + .grupo-banda{margin-top:12px}
+.grupo-banda[open]{border-color:var(--icbf-verde);box-shadow:var(--shadow)}
+.grupo-banda summary{list-style:none;cursor:pointer;padding:15px 18px;display:flex;
+  align-items:center;gap:12px;flex-wrap:wrap}
+.grupo-banda summary::-webkit-details-marker{display:none}
+.grupo-banda summary::before{content:"▾";display:inline-block;color:var(--acento,var(--icbf-verde));
+  font-weight:900;font-size:16px;transition:transform .2s;flex:0 0 auto}
+.grupo-banda[open] summary::before{transform:rotate(-180deg)}
+.grupo-banda .gb-dot{width:14px;height:14px;border-radius:50%;flex:0 0 auto;background:var(--acento)}
+.grupo-banda .gb-nombre{flex:1 1 240px;font-weight:800;font-family:var(--display);color:var(--ink);
+  font-size:15.5px}
+.grupo-banda .gb-badges{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.grupo-banda .gb-n,.grupo-banda .gb-cupos{font-size:11.5px;font-weight:700;color:#fff;
+  background:var(--acento,var(--icbf-verde));padding:4px 12px;border-radius:999px;
+  display:inline-block}
+.grupo-banda .gb-cuerpo{border-top:2px solid var(--rule);padding:4px 4px 6px;overflow-x:auto}
+.tabla-scroll{overflow-x:auto}
+table.tabla{width:100%;min-width:760px}
+table.tabla thead th{
+  text-align:left;font-size:11px;color:var(--icbf-verde-osc);text-transform:uppercase;
+  letter-spacing:.5px;font-weight:800;padding:10px;background:var(--sunk);
+  cursor:pointer;user-select:none;white-space:nowrap;
+}
+table.tabla thead th:hover{color:var(--icbf-verde-osc);background:var(--icbf-verde-suave)}
+table.tabla thead th .ar{opacity:.6;margin-left:3px;font-size:10px}
+table.tabla tbody td{padding:10px;border-bottom:1px solid var(--rule);font-size:13px;font-weight:500}
+table.tabla tbody tr:hover{background:var(--sunk)}
+table.tabla td.num{font-family:var(--mono);text-align:right}
+table.tabla tbody tr.fila-clicable{cursor:pointer}
+.chip-cupos{display:inline-block;padding:3px 12px;border-radius:999px;font-size:11px;font-weight:800;color:#fff}
+.chip-cupos.con{background:var(--icbf-verde)}
+.chip-cupos.sin{background:var(--rojo)}
+
+dl.fuentes{margin:0}
+dl.fuentes dt{font-weight:800;color:var(--icbf-verde-osc);margin-top:16px;font-size:14.5px}
+dl.fuentes dt:first-child{margin-top:0}
+dl.fuentes dd{margin:4px 0 0;color:var(--ink2);line-height:1.6;font-weight:500}
+footer.build{text-align:center;color:var(--ink3);font-size:11.5px;padding:24px 0 4px;font-weight:700}
+</style>
+</head>
+<body>
+<div id="app">
+  <header class="top">
+    <div>
+      <h1>¿Dónde lo ubico? · UDS más cercana</h1>
+      <div class="sub">Unidades de Servicio ICBF (Cuéntame) activas en los 125 municipios de Antioquia</div>
+    </div>
+  </header>
+
+  <div class="fila-toggles">
+    <details class="toggle-extra">
+      <summary>¿No encontró la dirección? Armarla por partes</summary>
+      <div class="direccion-partes">
+        <div>
+          <label for="viaTipo">Vía</label>
+          <select id="viaTipo">
+            <option>Calle</option>
+            <option>Carrera</option>
+            <option>Avenida</option>
+            <option>Avenida Calle</option>
+            <option>Avenida Carrera</option>
+            <option>Diagonal</option>
+            <option>Transversal</option>
+            <option>Circular</option>
+            <option>Autopista</option>
+            <option value="Vía">Vía (otra)</option>
+          </select>
+        </div>
+        <div>
+          <label for="viaNum1">Número</label>
+          <input type="text" id="viaNum1" placeholder="45 o 45A">
+        </div>
+        <div>
+          <label for="viaNum2">Cruce ( # )</label>
+          <input type="text" id="viaNum2" placeholder="23 o 23B">
+        </div>
+        <div>
+          <label for="viaNum3">Placa ( - )</label>
+          <input type="text" id="viaNum3" placeholder="10">
+        </div>
+        <div class="campo-ancho">
+          <label for="viaComplemento">Complemento (barrio, vereda, interior… opcional)</label>
+          <input type="text" id="viaComplemento" placeholder="Ej: Barrio Centro, interior 2">
+        </div>
+        <button type="button" id="btnBuscarPartes" disabled>Buscar esta dirección</button>
+      </div>
+    </details>
+  </div>
+
+  <div class="tablero">
+    <div class="panel-controles">
+
+      <div class="card">
+        <h2>1. Elige el municipio<small>acota la búsqueda de dirección y el mapa a esa zona</small></h2>
+        <div class="grupo-sel">
+          <label for="selMunicipio">Municipio</label>
+          <select id="selMunicipio"><option value="">Selecciona un municipio…</option></select>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>2. Marca el punto<small>escribe una dirección o haz clic/arrastra el pin en el mapa</small></h2>
+        <div class="buscar-dir">
+          <input type="text" id="inputDir" placeholder="Selecciona primero un municipio arriba" disabled>
+          <button type="button" id="btnBuscar" disabled>Buscar dirección</button>
+        </div>
+        <div class="nota">Usa OpenStreetMap (Nominatim) y necesita internet. También puedes saltarte el texto y hacer clic directamente en el mapa (o arrastrar el pin) para marcar el punto exacto.</div>
+
+        <div class="nota" id="estadoDir"></div>
+        <div class="candidatos" id="candidatosDir"></div>
+      </div>
+
+    </div>
+
+    <div class="panel-mapa">
+      <div class="card">
+        <div class="mapa-wrap">
+          <div id="mapaCerc"></div>
+          <div class="latlon-mapa">
+            <div>
+              <label for="inputLat">Lat</label>
+              <input type="text" id="inputLat" inputmode="decimal">
+            </div>
+            <div>
+              <label for="inputLon">Lon</label>
+              <input type="text" id="inputLon" inputmode="decimal">
+            </div>
+          </div>
+        </div>
+        <div class="leyenda-mapa" id="leyendaBandas"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Resultados<small id="subResultados"></small></h2>
+    <div id="resultados"></div>
+  </div>
+
+  <div class="card">
+    <h2>Fuentes y metodología</h2>
+    <dl class="fuentes" id="fuentesDl"></dl>
+  </div>
+
+  <footer class="build" id="pieBuild"></footer>
+</div>
+
+<script>
+const D = __DATOS__;
