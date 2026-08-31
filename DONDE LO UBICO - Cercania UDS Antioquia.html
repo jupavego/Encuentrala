@@ -25,6 +25,9 @@
   --icbf-verde:#5FA829; --icbf-verde-osc:#2F6B10; --icbf-verde-suave:#EAF5DC;
   --mde-amarillo:#FFDC2F; --mde-amarillo-osc:#C99A00;
   --azul:#0B6FA8; --violeta:#7B3FA0; --rojo:#D64545;
+  /* pin del personaje indigena del header (mismo diseno del favicon) */
+  --pin-piel:#B97852; --pin-piel-clara:#C98B65; --pin-cabello:#241812; --pin-osc:#29221F;
+  --pin-cinta-roja:#D95C4F; --pin-cinta-azul:#4D9FD7;
 
   --paper:#FFFFFF; --card:#FFFFFF; --sunk:#F1F8E9;
   --ink:#14210F; --ink2:#4A5C43; --ink3:#7C8B73;
@@ -52,29 +55,42 @@ select,input{font-family:var(--sans)}
 #app{max-width:1500px;margin:0 auto;padding:18px 22px 28px}
 header.top{
   display:flex;align-items:center;gap:16px;flex-wrap:wrap;
-  padding:26px 28px;margin:0 0 20px;color:#fff;position:relative;overflow:hidden;
+  padding:26px 130px 26px 28px;margin:0 0 20px;color:#fff;position:relative;overflow:hidden;
   background:linear-gradient(120deg,var(--icbf-verde-osc) 0%,var(--icbf-verde) 68%,#6FC534 100%);
   border-radius:24px;
   box-shadow:var(--shadow-lg);
 }
-header.top::after{
-  content:"";position:absolute;right:-32px;top:-32px;width:120px;height:120px;
-  border-radius:50%;background:var(--mde-amarillo);opacity:.95;pointer-events:none;
+/* estela decorativa de ondas + nodos (mismo patron del mockup del banner),
+   recorriendo el panel detras del texto -- puramente ambiental, no lleva
+   nada interactivo, por eso pointer-events:none. */
+header.top .bg-onda{position:absolute;inset:0;width:100%;height:100%;z-index:0;pointer-events:none}
+/* el personaje-pin del favicon, ahora tambien en el extremo del banner --
+   misma pieza, reutilizada para que el icono de pestana y el header se
+   sientan como el mismo personaje. */
+header.top .pin-personaje{
+  position:absolute;right:-4px;top:50%;transform:translateY(-50%);
+  width:96px;height:104px;z-index:1;pointer-events:none;
+  filter:drop-shadow(0 4px 10px rgba(0,0,0,.22));
 }
+header.top .pin-personaje svg{width:100%;height:100%;display:block}
 /* en movil el h1 (25px, bold) envuelve a 2 lineas dentro de un header
-   angosto -- el circulo decorativo, pensado para un header ancho de
-   escritorio, terminaba tapando el final de la primera linea ("más").
-   Se achica y se recorre para que quede solo como acento de esquina, sin
-   alcanzar el texto. */
+   angosto -- el pin, pensado para un header ancho de escritorio, terminaba
+   tapando el final de la primera linea ("más"). Se achica progresivamente
+   y desaparece del todo en el ancho mas angosto. */
+@media (max-width:640px){
+  header.top{padding-right:88px}
+  header.top .pin-personaje{width:66px;height:72px;right:-2px}
+}
 @media (max-width:480px){
-  header.top::after{width:60px;height:60px;right:-18px;top:-18px}
+  header.top{padding-right:28px}
+  header.top .pin-personaje{display:none}
   header.top h1{font-size:21px}
 }
 header.top h1{
-  font-size:25px;line-height:1.1;letter-spacing:-.4px;color:#fff;font-weight:900;position:relative;
+  font-size:25px;line-height:1.1;letter-spacing:-.4px;color:#fff;font-weight:900;position:relative;z-index:1;
 }
 header.top .sub{
-  font-size:12px;color:#EAF7DC;margin-top:5px;font-weight:600;font-family:var(--sans);
+  font-size:12px;color:#EAF7DC;margin-top:5px;font-weight:600;font-family:var(--sans);position:relative;z-index:1;
   position:relative;
 }
 
@@ -386,6 +402,48 @@ footer.build .autoria{display:inline-block;margin-top:12px;font-size:10.5px;font
 <body>
 <div id="app">
   <header class="top">
+    <svg class="bg-onda" viewBox="0 0 1100 160" preserveAspectRatio="none" aria-hidden="true">
+      <g fill="none" stroke="rgba(255,255,255,.14)" stroke-width="1">
+        <circle cx="1010" cy="80" r="90"/><circle cx="1010" cy="80" r="180"/>
+        <circle cx="1010" cy="80" r="270"/><circle cx="1010" cy="80" r="360"/>
+        <circle cx="1010" cy="80" r="450"/><circle cx="1010" cy="80" r="540"/>
+        <circle cx="1010" cy="80" r="630"/><circle cx="1010" cy="80" r="720"/>
+      </g>
+      <g fill="#fff" opacity=".8">
+        <circle cx="940" cy="45" r="2"/><circle cx="910" cy="120" r="2.5"/>
+        <circle cx="860" cy="80" r="1.5"/><circle cx="820" cy="30" r="2"/>
+        <circle cx="780" cy="140" r="2.5"/><circle cx="740" cy="95" r="2"/>
+        <circle cx="690" cy="50" r="1.5"/><circle cx="650" cy="110" r="2.5"/>
+        <circle cx="610" cy="20" r="2"/><circle cx="560" cy="135" r="2"/>
+        <circle cx="520" cy="70" r="2.5"/><circle cx="470" cy="40" r="1.5"/>
+      </g>
+      <g fill="var(--mde-amarillo)" opacity=".85">
+        <circle cx="885" cy="105" r="2.5"/><circle cx="800" cy="65" r="2"/>
+        <circle cx="710" cy="130" r="2.5"/><circle cx="630" cy="75" r="2"/>
+        <circle cx="540" cy="25" r="2.5"/>
+      </g>
+    </svg>
+    <div class="pin-personaje">
+      <svg viewBox="0 0 240 240" aria-hidden="true">
+        <path fill="var(--mde-amarillo)" d="M120 12 C68 12 34 48 34 94 C34 145 82 180 120 221 C158 180 206 145 206 94 C206 48 172 12 120 12Z"/>
+        <path fill="var(--pin-cabello)" d="M75 96 C72 75 78 58 93 49 C107 40 124 40 139 48 C155 57 165 74 165 96 C158 84 150 78 142 75 C134 72 128 73 121 76 C114 67 106 64 98 68 C88 73 82 84 75 96Z"/>
+        <ellipse cx="120" cy="113" rx="44" ry="52" fill="var(--pin-piel)"/>
+        <ellipse cx="76" cy="113" rx="10" ry="15" fill="var(--pin-piel)"/>
+        <ellipse cx="164" cy="113" rx="10" ry="15" fill="var(--pin-piel)"/>
+        <path fill="var(--icbf-verde-osc)" d="M78 79 Q120 64 162 79 L160 87 Q120 73 80 87Z"/>
+        <path d="M94 77 L99 84 L104 76 L109 82 L114 74" stroke="var(--pin-cinta-roja)" stroke-width="3" fill="none" stroke-linecap="round"/>
+        <path d="M125 74 L130 82 L135 75 L140 83 L145 77" stroke="var(--pin-cinta-azul)" stroke-width="3" fill="none" stroke-linecap="round"/>
+        <ellipse cx="101" cy="108" rx="6.5" ry="4.5" fill="var(--pin-osc)"/>
+        <ellipse cx="139" cy="108" rx="6.5" ry="4.5" fill="var(--pin-osc)"/>
+        <circle cx="103" cy="106.5" r="1.4" fill="#fff"/>
+        <circle cx="141" cy="106.5" r="1.4" fill="#fff"/>
+        <path d="M120 111 Q114 123 120 126 Q126 123 120 111Z" fill="var(--pin-piel-clara)"/>
+        <ellipse cx="91" cy="127" rx="8" ry="4" fill="#D58B75" opacity=".45"/>
+        <ellipse cx="149" cy="127" rx="8" ry="4" fill="#D58B75" opacity=".45"/>
+        <path d="M104 135 Q120 148 136 135" stroke="var(--pin-osc)" stroke-width="3" fill="none" stroke-linecap="round"/>
+        <path fill="#fff" d="M120 174 C111 163 97 169 97 181 C97 193 120 202 120 202 C120 202 143 193 143 181 C143 169 129 163 120 174Z"/>
+      </svg>
+    </div>
     <div>
       <h1>Encontrala · UDS más cercana</h1>
       <div class="sub">Unidades de Servicio ICBF (Cuéntame) activas en los 125 municipios de Antioquia</div>
