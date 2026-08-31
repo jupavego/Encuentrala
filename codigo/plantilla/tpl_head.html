@@ -137,15 +137,32 @@ details.card[open] summary h2::before{content:"–  "}
   letter-spacing:0;font-size:12px}
 .nota{font-size:12px;color:var(--ink3);line-height:1.5;margin:2px 2px 14px;font-weight:500}
 
-.grupo-sel{display:flex;flex-direction:column;gap:6px;margin-bottom:4px;position:relative}
+/* los tres filtros territoriales (municipio -> corregimiento -> vereda) usan
+   exactamente el mismo patron hibrido select+buscador, asi que el estilo se
+   define una sola vez por clase en vez de por id. */
+.grupo-sel{display:flex;flex-direction:column;gap:6px;margin-bottom:4px;position:relative;z-index:1}
+/* el desplegable de un grupo tiene que pintarse por ENCIMA de los grupos que
+   siguen (y de la tarjeta de abajo). La lista solo existe mientras el campo
+   tiene el foco -- ver onblur en el JS -- asi que :focus-within alcanza para
+   levantar el grupo activo sin necesidad de manejar z-index a mano. */
+.grupo-sel:focus-within{z-index:50}
+.grupo-sel + .grupo-sel{margin-top:12px}
 .grupo-sel label{font-size:11px;font-weight:700;color:var(--ink2);text-transform:uppercase;letter-spacing:.8px}
-#inputMunicipio{
+.grupo-sel label .op{font-weight:600;color:var(--ink3);text-transform:none;letter-spacing:0;font-size:10.5px}
+.grupo-sel input{
   width:100%;background:var(--sunk);border:2.5px solid var(--rule2);border-radius:var(--radio-pill);
   padding:12px 44px 12px 20px;font-size:14.5px;color:var(--ink);font-weight:700;font-family:var(--display);
   transition:border-color .15s,transform .1s;
 }
-#inputMunicipio:hover{border-color:var(--icbf-verde)}
-#inputMunicipio:focus{border-color:var(--icbf-verde);outline:none}
+.grupo-sel input:hover:not(:disabled){border-color:var(--icbf-verde)}
+.grupo-sel input:focus{border-color:var(--icbf-verde);outline:none}
+.grupo-sel input:disabled{opacity:.55;cursor:not-allowed}
+/* los dos filtros de abajo (corregimiento/vereda) son de la familia amarilla
+   -- la misma que sus poligonos en el mapa (ver COLOR_TERRITORIO en el JS),
+   para que se lea de una que ese control y esa zona pintada son lo mismo. */
+.grupo-sel.territorio input:hover:not(:disabled),
+.grupo-sel.territorio input:focus{border-color:var(--mde-amarillo-osc)}
+.grupo-sel.territorio input:not(:placeholder-shown){border-color:var(--mde-amarillo-osc);background:#FFFBEA}
 /* flechita de "desplegable" -- puramente visual, el input sigue siendo de
    texto libre; solo avisa que hacer clic sin escribir muestra la lista
    completa, no solo resultados filtrados. */
@@ -158,10 +175,26 @@ details.card[open] summary h2::before{content:"–  "}
    redondeado de la tarjeta de abajo ("2. Marca el punto") asoma por los
    costados mientras se solapan verticalmente (reportado como "se ve un
    conflicto" entre el desplegable y esa tarjeta). */
-#listaMunicipios{position:absolute;top:100%;left:-22px;right:-22px;z-index:40;margin-top:6px;
+.candidatos.desplegable{position:absolute;top:100%;left:-22px;right:-22px;z-index:40;margin-top:6px;
   max-height:280px;overflow-y:auto;background:var(--card);border:2px solid var(--rule2);
   border-radius:var(--radio-sm);box-shadow:var(--shadow-lg)}
-#listaMunicipios:not(:empty){padding:6px}
+.candidatos.desplegable:not(:empty){padding:6px}
+/* pista secundaria dentro de cada opcion del desplegable (n de UDS, tipo de
+   territorio, corregimiento al que pertenece la vereda) */
+.candidato .pista{display:block;font-size:10.5px;font-weight:600;color:var(--ink3);margin-top:2px}
+.candidato:hover .pista{color:var(--icbf-verde-osc)}
+
+/* interruptor de la capa de contexto (el contorno tenue de TODAS las veredas
+   del municipio). No quita el filtro -- corregimiento y vereda se comportan
+   igual que el de municipio, siempre reflejan donde esta el pin -- solo
+   despeja el mapa cuando el municipio tiene muchas veredas (Turbo tiene 235)
+   y el rayado estorba para ver las UDS. */
+#btnVeredasMuni{display:none;margin-top:14px;width:100%;
+  background:#FFFBEA;color:#5C4400;border:2px solid var(--mde-amarillo);
+  border-radius:var(--radio-pill);padding:9px 18px;font-size:12.5px;font-weight:800;
+  font-family:var(--display);transition:background .15s,border-color .15s}
+#btnVeredasMuni:hover{background:var(--mde-amarillo);border-color:var(--mde-amarillo-osc)}
+#btnVeredasMuni.visible{display:block}
 
 .buscar-dir{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px}
 .buscar-dir input{
@@ -309,6 +342,13 @@ details.card[open] summary h2::before{content:"–  "}
   font-size:12.5px;font-weight:700;color:var(--ink2);margin-top:14px}
 .leyenda-mapa .pt{display:inline-block;width:12px;height:12px;border-radius:50%;
   margin-right:6px;vertical-align:-1px;border:2px solid #fff;box-shadow:0 0 0 1.5px rgba(0,0,0,.15)}
+/* muestra de las capas territoriales: un rectangulo con borde y relleno, no
+   un punto -- son zonas, no unidades, y asi la leyenda no las confunde con
+   las UDS. */
+.leyenda-mapa .zn{display:inline-block;width:18px;height:12px;border-radius:3px;
+  margin-right:6px;vertical-align:-1px}
+/* separador visual entre el bloque de UDS y el de zonas dentro de la leyenda */
+.leyenda-mapa .sep{width:1px;height:16px;background:var(--rule2);display:inline-block}
 .leaflet-popup-content{font-family:var(--sans);font-size:13px}
 .leaflet-popup-content b{display:block;margin-bottom:2px;font-weight:800}
 .leaflet-tooltip{font-family:var(--sans);font-size:12.5px;line-height:1.55;color:var(--ink);
@@ -340,7 +380,7 @@ details.card[open] summary h2::before{content:"–  "}
   display:inline-block}
 .grupo-banda .gb-cuerpo{border-top:2px solid var(--rule);padding:4px 4px 6px;overflow-x:auto}
 .tabla-scroll{overflow-x:auto}
-table.tabla{width:100%;min-width:760px}
+table.tabla{width:100%;min-width:980px}
 table.tabla thead th{
   text-align:left;font-size:11px;color:var(--icbf-verde-osc);text-transform:uppercase;
   letter-spacing:.5px;font-weight:800;padding:10px;background:var(--sunk);
@@ -360,6 +400,32 @@ table.tabla tbody tr.fila-resaltada{background:var(--mde-amarillo) !important}
 .chip-cupos{display:inline-block;padding:3px 12px;border-radius:999px;font-size:11px;font-weight:800;color:#fff}
 .chip-cupos.con{background:var(--icbf-verde)}
 .chip-cupos.sin{background:var(--rojo)}
+
+/* ---------- bloque "UDS dentro de <vereda/corregimiento>" ----------
+   Va ARRIBA de los grupos por banda de distancia y responde una pregunta
+   distinta: no "que tan cerca esta cada UDS del pin" sino "cuales caen dentro
+   de esta zona", sin importar la distancia -- una vereda grande puede tener
+   UDS mas alla del radio que termino usando la busqueda por cercania, y esas
+   tienen que aparecer igual. Familia amarilla, la misma de los poligonos de
+   territorio en el mapa y de sus dos filtros. */
+.bloque-territorio{border:2.5px solid var(--mde-amarillo);border-radius:var(--radio-sm);
+  background:#FFFDF5;margin-bottom:18px;overflow:hidden}
+.bloque-territorio > header{display:flex;align-items:center;gap:12px;flex-wrap:wrap;
+  padding:14px 18px;background:linear-gradient(120deg,#FFFBEA 0%,#FFEFB0 100%);
+  border-bottom:2px solid var(--mde-amarillo)}
+.bloque-territorio .bt-tipo{font-size:10px;font-weight:800;color:#8A6A00;text-transform:uppercase;
+  letter-spacing:.9px;background:#fff;border-radius:999px;padding:4px 11px;flex:0 0 auto}
+.bloque-territorio .bt-nombre{flex:1 1 200px;font-size:16px;font-weight:900;color:#5C4400;
+  font-family:var(--display);letter-spacing:-.2px}
+.bloque-territorio .bt-badges{display:flex;gap:8px;flex-wrap:wrap}
+.bloque-territorio .bt-badges span{font-size:11.5px;font-weight:800;color:#5C4400;
+  background:var(--mde-amarillo);padding:4px 12px;border-radius:999px}
+.bloque-territorio .bt-cuerpo{padding:4px 4px 6px;overflow-x:auto}
+.bloque-territorio .nota{margin:12px 16px}
+/* fila de una UDS que ademas cae dentro de la zona elegida, dentro de las
+   tablas por banda de distancia de mas abajo -- para poder distinguirla sin
+   tener que cruzar a ojo las dos tablas. */
+table.tabla tbody tr.fila-en-territorio td:first-child{box-shadow:inset 3px 0 0 var(--mde-amarillo-osc)}
 
 dl.fuentes{margin:0}
 dl.fuentes dt{font-weight:800;color:var(--icbf-verde-osc);margin-top:16px;font-size:14.5px}
@@ -396,12 +462,23 @@ footer.build .autoria{display:inline-block;margin-top:12px;font-size:10.5px;font
     <div class="panel-controles">
 
       <div class="card">
-        <h2>1. Elige el municipio<small>acota la búsqueda de dirección y el mapa a esa zona</small></h2>
+        <h2>1. Elige el territorio<small>el municipio acota el mapa y la búsqueda de dirección; corregimiento y vereda son opcionales y llevan el pin dentro de esa zona</small></h2>
         <div class="grupo-sel">
           <label for="inputMunicipio">Municipio</label>
           <input type="text" id="inputMunicipio" placeholder="Escribe para buscar…" autocomplete="off">
-          <div class="candidatos" id="listaMunicipios"></div>
+          <div class="candidatos desplegable" id="listaMunicipios"></div>
         </div>
+        <div class="grupo-sel territorio">
+          <label for="inputCorregimiento">Corregimiento <span class="op">(opcional)</span></label>
+          <input type="text" id="inputCorregimiento" placeholder="Elige primero un municipio" autocomplete="off" disabled>
+          <div class="candidatos desplegable" id="listaCorregimientos"></div>
+        </div>
+        <div class="grupo-sel territorio">
+          <label for="inputVereda">Vereda <span class="op">(opcional)</span></label>
+          <input type="text" id="inputVereda" placeholder="Elige primero un municipio" autocomplete="off" disabled>
+          <div class="candidatos desplegable" id="listaVeredas"></div>
+        </div>
+        <button type="button" id="btnVeredasMuni">Ocultar el contorno de las demás veredas</button>
       </div>
 
       <div class="card">
@@ -499,3 +576,4 @@ footer.build .autoria{display:inline-block;margin-top:12px;font-size:10.5px;font
 
 <script>
 const D = __DATOS__;
+const V = __VEREDAS__;

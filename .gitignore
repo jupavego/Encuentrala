@@ -9,3 +9,6 @@ muestra_tipografias.html
 # basura de SO
 Thumbs.db
 .DS_Store
+
+# entorno local de Claude Code (worktrees, launch.json) -- no forma parte del sitio
+.claude/
