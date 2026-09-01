@@ -1,4 +1,14 @@
+# insumos crudos (el .xlsm y los geojson: cientos de MB, y con datos personales)
 fuente/
+
+# los JSON ya van embebidos dentro del HTML final -- subirlos los deja ademas
+# accesibles como archivo suelto en /recursos/..., porque los "rewrites" de
+# vercel.json solo actuan cuando NO existe un archivo estatico en esa ruta.
+recursos/
+
+# el pipeline de generacion no hace falta para servir el sitio
+codigo/
+
+# borradores de exploracion de estilo
 tokyo_*.html
 muestra_tipografias.html
-codigo/

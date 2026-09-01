@@ -12,3 +12,5 @@ Thumbs.db
 
 # entorno local de Claude Code (worktrees, launch.json) -- no forma parte del sitio
 .claude/
+.vercel
+.env*
