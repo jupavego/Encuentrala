@@ -48,7 +48,7 @@ for (const [i, l] of Object.entries(esperado)) {
   const got = api.letraCol(Number(i));
   if (got !== l) throw new Error(`letraCol(${i}) = ${got}, se esperaba ${l}`);
 }
-console.log("letraCol: OK (A..BF, 56 columnas de CUENTAME + 2 propias)");
+console.log(`letraCol: OK (referencias de celda hasta ${api.letraCol(X.cols.length + 1)})`);
 
 // se exporta una muestra real: las primeras 40 UDS del reporte
 const ids = Object.keys(X.filas).slice(0, 40);

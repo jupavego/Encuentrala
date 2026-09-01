@@ -38,7 +38,11 @@ FUENTE = os.path.join(RAIZ, "fuente", "BD ANALISIS COBERTURA v21.xlsm")
 DATOS_CERC = os.path.join(RAIZ, "recursos", "datos_cercania.json")
 OUT = os.path.join(RAIZ, "recursos", "datos_cuentame.json")
 
-INCLUIR_DATOS_PERSONALES = True
+# False: el sitio se publica en una URL de acceso abierto
+# (https://encuentrala.vercel.app/), asi que las columnas de identidad del
+# responsable no se embeben. Ver la seccion de datos personales del README
+# antes de volver a ponerlo en True.
+INCLUIR_DATOS_PERSONALES = False
 
 COLUMNAS_PERSONALES = [
     "Identificación Responsable UDS",

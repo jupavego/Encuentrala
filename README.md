@@ -14,6 +14,7 @@ Radio de búsqueda adaptativo, filtros de municipio / corregimiento / vereda, b�
   - `generar_sitio.py` — arma el HTML final a partir de `codigo/plantilla/` + los tres JSON.
   - `verificar.py` — pruebas de humo sobre los datos publicados.
   - `verificar_xlsx.py` — comprueba que el Excel que genera el sitio se abra de verdad (requiere Node).
+  - `auditar_personales.py` — comprueba que el HTML publicado no exponga datos de identidad.
   - `plantilla/` — plantilla HTML/CSS (`tpl_head.html`) y lógica JS (`tpl_tail.js`).
   - `favicon_b64.txt` — ícono de la pestaña (y del pin del mapa), en base64.
 - `recursos/datos_cercania.json` — UDS, municipios y coordenadas ya procesados.
@@ -29,6 +30,7 @@ python codigo/generar_datos_cuentame.py    # solo si cambió el Excel fuente
 python codigo/generar_sitio.py
 python codigo/verificar.py                 # comprueba los datos publicados
 python codigo/verificar_xlsx.py            # comprueba la descarga a Excel (requiere Node)
+python codigo/auditar_personales.py        # OBLIGATORIO antes de publicar
 ```
 
 El orden importa: los tres JSON se cruzan por Código UDS, así que si se regenera
@@ -42,52 +44,79 @@ los tiles de OpenStreetMap y Nominatim.
 
 ## Descarga a Excel
 
-Cada tabla de resultados tiene un botón **Descargar Excel** que entrega un `.xlsx`
-con la hoja `CUENTAME` original —sus 56 columnas, tal cual— acotada a las UDS que
-esa tabla muestra:
+A la derecha del título **Resultados** hay un botón **Descargar Excel** que entrega
+un `.xlsx` con la hoja `CUENTAME` original, acotada a las UDS que esa sección
+muestra: todas las del radio de búsqueda, las tres bandas de distancia juntas.
 
-- En el bloque de zona: todas las UDS de la vereda o corregimiento elegido, sin
-  importar a qué distancia quedaron del pin.
-- En *Resultados*: todas las UDS del radio de búsqueda, las tres bandas juntas.
+Además de las columnas de CUENTAME, el archivo trae dos propias al final:
+
+- `Corregimiento (mapa veredal Antioquia)`
+- `Vereda (mapa veredal Antioquia)`
+
+Son la zona que **este sitio** le atribuye a cada UDS cruzando su coordenada contra
+el mapa veredal. Van rotuladas aparte a propósito: no salen del reporte Cuéntame, y
+CUENTAME ya trae un `Centro Poblado UDS` que es otra cosa y no siempre coincide.
 
 El archivo se arma en el navegador, sin librerías externas (un `.xlsx` es un ZIP con
 unos XML dentro). `codigo/verificar_xlsx.py` comprueba de punta a punta que lo que
 produce el sitio se abra en un lector de Excel real y que el contenido sea exacto.
 
-## ⚠ Datos personales — leer antes de publicar
+## ⚠ Datos personales
 
-`recursos/datos_cuentame.json` incluye las 56 columnas de CUENTAME, y cinco de ellas
-son datos personales del responsable de cada UDS:
+El sitio se publica en **https://encuentrala.vercel.app/ , una URL de acceso
+abierto**. Por eso `codigo/generar_datos_cuentame.py` va con:
 
-| Columna | Cómo viaja |
-|---|---|
-| `Identificación Responsable UDS` | **enmascarada**: `****5546` (solo los últimos 4 dígitos) |
-| `Primer Nombre`, `Segundo Nombre`, `Primer Apellido`, `Segundo Apellido` | completos |
+```python
+INCLUIR_DATOS_PERSONALES = False
+```
 
-El número de documento **nunca sale completo**: se enmascara siempre, incluso con
-`INCLUIR_DATOS_PERSONALES = True`. Es irreversible — los dígitos ocultos no están en
-ninguna parte del archivo publicado — y deja lo suficiente para cotejar contra un
-documento que ya se tenga a la mano.
+Con eso, las cinco columnas de identidad del responsable de cada UDS **no se
+embeben en el HTML**:
+
+`Identificación Responsable UDS`, `Primer Nombre`, `Segundo Nombre`,
+`Primer Apellido`, `Segundo Apellido`.
+
+El Excel descargado queda con 53 columnas (51 de CUENTAME + 2 de zona) en vez de
+58. No se pierde ninguna UDS: las 4.328 filas siguen completas, y también
+contrato, entidad, ubicación, cupos, servicio, vivienda, fechas y clasificación
+de cobertura.
+
+### Antes de cada publicación
+
+```
+python codigo/auditar_personales.py
+```
+
+Compara el HTML generado contra la hoja fuente y falla si alguna columna de
+identidad quedó declarada, o si un documento o un nombre aparece como valor de
+un campo publicado. Compara **campo por campo**, no por subcadena: buscar
+`43272222` como texto suelto da positivos falsos, porque esos dígitos aparecen
+dentro de la coordenada `-75.54327222222221`.
+
+La auditoría reporta dos avisos esperados, que **no** son fugas:
+
+- Unos 35 nombres y apellidos coinciden con topónimos que el sitio ya publicaba:
+  `AMALFI`, `BARBOSA`, `BELLO` son municipios; `BELEN` un barrio; `LAGUNA` y
+  `GALAN` nombres de veredas. La auditoría muestra de qué columna sale cada uno.
+- La UDS `058471148728` trae un número de documento digitado por error en
+  `Teléfono UDS`. Es un error de captura en la fuente, en una columna que ya era
+  pública desde antes.
+
+### Si alguna vez hay que volver a incluirlos
+
+Poner `INCLUIR_DATOS_PERSONALES = True` y volver a correr ese script y
+`generar_sitio.py`. En ese caso el sitio **no puede quedar en una URL abierta**:
+hay que ponerle control de acceso primero (en Vercel, *Deployment Protection* →
+*Password Protection* o *Vercel Authentication*). `generar_sitio.py` avisa en
+cada corrida qué versión está armando.
+
+Incluso así, el **número de documento nunca sale completo**: se enmascara siempre
+(`****5546`, solo los últimos 4 dígitos). Es irreversible — los dígitos ocultos no
+están en ninguna parte del archivo publicado.
 
 > **Por qué enmascarar y no cifrar.** El sitio es una página estática. Cualquier
 > llave capaz de descifrar el dato tendría que viajar dentro de la misma página, al
 > alcance de quien la abra: un cifrado así no protegería nada, solo lo aparentaría.
-
-Los nombres sí viajan completos, y quedan **embebidos en el HTML**, no solo en el
-archivo que se descarga: cualquiera que abra la página puede leerlos. Cruzados con
-`Dirección UDS`, las coordenadas y `Hogar Funciona En Su Vivienda`, identifican a
-~4.300 personas —en buena parte madres comunitarias— junto con la ubicación de su
-vivienda.
-
-**Por eso este HTML no debe quedar en una URL de acceso abierto.** Antes de
-desplegarlo hay que ponerle control de acceso (en Vercel: *Deployment Protection* →
-*Password Protection* o *Vercel Authentication*, en la configuración del proyecto).
-
-Para generar una versión **sin** datos personales —apta para publicación abierta—
-poner `INCLUIR_DATOS_PERSONALES = False` en `codigo/generar_datos_cuentame.py` y
-volver a correr ese script y `generar_sitio.py`. El sitio queda idéntico salvo que
-el Excel descargado trae 51 columnas en vez de 56. `generar_sitio.py` avisa en cada
-corrida si la versión que está armando lleva datos personales.
 
 ## Si el script se detiene diciendo que la hoja no pasó las comprobaciones
 
