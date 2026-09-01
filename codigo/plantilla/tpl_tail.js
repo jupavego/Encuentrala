@@ -535,17 +535,23 @@ V.corregimientos.forEach((c, i) => { (CORR_POR_MUNI[c.m] = CORR_POR_MUNI[c.m] ||
 // y para "que UDS hay en esta vereda" esas cuentan igual). Se arma una sola
 // vez sobre los 4328 puntos, no en cada busqueda.
 const UDS_POR_VEREDA = {}, UDS_POR_CORR = {}, UDS_POR_MUNI = {};
+// indice del municipio por nombre, para agrupar por el dato declarado
+const IDX_MUNI_POR_NOMBRE = {};
+D.municipios.forEach((m, i) => { IDX_MUNI_POR_NOMBRE[m.nombre] = i; });
 D.puntos.forEach(p => {
+  // Por municipio se agrupa por el "Municipio UDS" de la hoja CUENTAME, que
+  // es el dato de origen y el que usa el resto del reporte. No por el
+  // poligono donde cae la coordenada: son 85 las UDS en las que ambos no
+  // coinciden, y esas apareceran listadas en su municipio declarado aunque
+  // en el mapa su punto quede fuera de ese contorno.
+  // Va antes del corte por vereda a proposito: asi entran tambien las 5 UDS
+  // que no cayeron dentro de ninguna vereda.
+  const im = IDX_MUNI_POR_NOMBRE[p.mun];
+  if (im != null) (UDS_POR_MUNI[im] = UDS_POR_MUNI[im] || []).push(p);
   const a = V.uds[p.id];
   if (!a) return;
   (UDS_POR_VEREDA[a[0]] = UDS_POR_VEREDA[a[0]] || []).push(p);
   if (a.length > 1) (UDS_POR_CORR[a[1]] = UDS_POR_CORR[a[1]] || []).push(p);
-  // por municipio se agrupa a traves de la vereda que contiene la UDS, no
-  // por su "Municipio UDS" declarado: son 85 las UDS cuyo municipio escrito
-  // no coincide con el poligono donde cae su coordenada, y aqui lo que se
-  // pregunta es justamente que hay DENTRO del poligono.
-  const m = V.veredas[a[0]].m;
-  (UDS_POR_MUNI[m] = UDS_POR_MUNI[m] || []).push(p);
 });
 function udsDeZona(t) {
   if (!t) return [];
