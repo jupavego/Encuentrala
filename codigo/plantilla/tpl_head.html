@@ -247,23 +247,36 @@ details.card[open] summary h2::before{content:"–  "}
    peso visual que los campos de arriba y peleaba con ellos por la atencion.
    Ahora va como texto con un separador tenue encima -- presente, pero
    claramente por debajo de los tres filtros en la jerarquia. */
-/* Interruptor de la capa de veredas, al extremo derecho de la leyenda del
-   mapa. margin-left:auto lo empuja hasta el borde: la leyenda explica lo que
-   se ve dibujado y esto enciende y apaga una de esas capas, asi que el par
-   se lee junto. Pastilla discreta, mas liviana que los botones de accion del
-   sitio -- no compite con "Buscar direccion" ni con "Descargar Excel". */
-#btnVeredasMuni{display:none;margin-left:auto;flex:0 0 auto;
+/* Cambio de modo de consulta, al extremo derecho de la leyenda del mapa
+   (margin-left:auto lo empuja hasta el borde). Pastilla discreta, mas liviana
+   que los botones de accion del sitio -- no compite con "Buscar direccion" ni
+   con "Descargar Excel".
+   Tiene DOS estados y se ven distintos a proposito: apagado (borde amarillo,
+   fondo casi blanco) invita a activarlo; activo (amarillo solido) avisa que
+   la pagina esta en un modo especial y que lo que se ve abajo ya no es una
+   busqueda por cercania. Sin esa diferencia habria que leer el rotulo para
+   saber en que modo se esta. */
+#btnModoZona{display:none;margin-left:auto;flex:0 0 auto;
   background:#FFFCF0;color:#5C4400;border:1.5px solid var(--mde-amarillo);
   border-radius:var(--radio-pill);padding:6px 14px;font-size:11.5px;font-weight:700;
   font-family:var(--display);white-space:nowrap;
-  transition:background .15s,border-color .15s}
-#btnVeredasMuni::before{content:"◍";margin-right:7px;color:var(--mde-amarillo-osc);font-size:12px}
-#btnVeredasMuni:hover{background:var(--mde-amarillo);border-color:var(--mde-amarillo-osc)}
-#btnVeredasMuni.visible{display:inline-flex;align-items:center}
+  transition:background .15s,border-color .15s,box-shadow .15s}
+#btnModoZona::before{content:"◎";margin-right:7px;color:var(--mde-amarillo-osc);font-size:12px}
+#btnModoZona:hover{background:var(--mde-amarillo);border-color:var(--mde-amarillo-osc)}
+#btnModoZona.visible{display:inline-flex;align-items:center}
+#btnModoZona.activo{background:var(--mde-amarillo);border-color:var(--mde-amarillo-osc);
+  box-shadow:0 3px 10px rgba(201,154,0,.35)}
+#btnModoZona.activo::before{content:"◉";color:#5C4400}
+/* franja que encabeza los resultados en modo por zona: sin ella, una tabla
+   sin bandas de distancia se puede confundir con una busqueda por cercania
+   que no encontro mucho. */
+.aviso-modo-zona{background:#FFFCF0;border:1.5px solid var(--mde-amarillo);
+  border-radius:var(--radio-sm);padding:10px 14px;margin:0 0 14px;
+  color:#5C4400;font-size:12.5px;font-weight:600}
 /* en angosto la leyenda ya envuelve; el boton pasa a su propia linea y deja
    de estar pegado al borde derecho. */
 @media (max-width:560px){
-  #btnVeredasMuni{margin-left:0}
+  #btnModoZona{margin-left:0}
 }
 
 .buscar-dir{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px}
@@ -667,14 +680,13 @@ footer.build .autoria{display:inline-block;margin-top:12px;font-size:10.5px;font
             </div>
           </div>
         </div>
-        <!-- El interruptor de la capa de veredas vive aqui, no en la tarjeta
-             de filtros: lo que enciende y apaga es una capa DEL MAPA, y al
-             lado de los tres campos competia con ellos como si fuera un
-             cuarto filtro. Va al extremo derecho de la leyenda (ver el
-             margin-left:auto del CSS), que es la fila que ya explica lo que
-             se ve dibujado. -->
+        <!-- El cambio de modo de consulta vive aqui, no en la tarjeta de
+             filtros: no filtra nada, cambia QUE se lista (lo cercano al pin,
+             o todo lo que hay dentro de la zona). Va al extremo derecho de la
+             leyenda (margin-left:auto), la fila que ya explica lo que se ve
+             dibujado en el mapa. -->
         <div class="leyenda-mapa" id="leyendaBandas">
-          <button type="button" id="btnVeredasMuni">Ocultar el contorno de las demás veredas</button>
+          <button type="button" id="btnModoZona">Ver todas las UDS de la zona</button>
         </div>
         <!-- Debajo del mapa, en la columna del mapa: es el espacio que
              quedaba sin usar, y ahi el formulario recupera el ancho para el

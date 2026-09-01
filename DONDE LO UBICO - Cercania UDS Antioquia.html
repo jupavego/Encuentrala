@@ -247,23 +247,36 @@ details.card[open] summary h2::before{content:"–  "}
    peso visual que los campos de arriba y peleaba con ellos por la atencion.
    Ahora va como texto con un separador tenue encima -- presente, pero
    claramente por debajo de los tres filtros en la jerarquia. */
-/* Interruptor de la capa de veredas, al extremo derecho de la leyenda del
-   mapa. margin-left:auto lo empuja hasta el borde: la leyenda explica lo que
-   se ve dibujado y esto enciende y apaga una de esas capas, asi que el par
-   se lee junto. Pastilla discreta, mas liviana que los botones de accion del
-   sitio -- no compite con "Buscar direccion" ni con "Descargar Excel". */
-#btnVeredasMuni{display:none;margin-left:auto;flex:0 0 auto;
+/* Cambio de modo de consulta, al extremo derecho de la leyenda del mapa
+   (margin-left:auto lo empuja hasta el borde). Pastilla discreta, mas liviana
+   que los botones de accion del sitio -- no compite con "Buscar direccion" ni
+   con "Descargar Excel".
+   Tiene DOS estados y se ven distintos a proposito: apagado (borde amarillo,
+   fondo casi blanco) invita a activarlo; activo (amarillo solido) avisa que
+   la pagina esta en un modo especial y que lo que se ve abajo ya no es una
+   busqueda por cercania. Sin esa diferencia habria que leer el rotulo para
+   saber en que modo se esta. */
+#btnModoZona{display:none;margin-left:auto;flex:0 0 auto;
   background:#FFFCF0;color:#5C4400;border:1.5px solid var(--mde-amarillo);
   border-radius:var(--radio-pill);padding:6px 14px;font-size:11.5px;font-weight:700;
   font-family:var(--display);white-space:nowrap;
-  transition:background .15s,border-color .15s}
-#btnVeredasMuni::before{content:"◍";margin-right:7px;color:var(--mde-amarillo-osc);font-size:12px}
-#btnVeredasMuni:hover{background:var(--mde-amarillo);border-color:var(--mde-amarillo-osc)}
-#btnVeredasMuni.visible{display:inline-flex;align-items:center}
+  transition:background .15s,border-color .15s,box-shadow .15s}
+#btnModoZona::before{content:"◎";margin-right:7px;color:var(--mde-amarillo-osc);font-size:12px}
+#btnModoZona:hover{background:var(--mde-amarillo);border-color:var(--mde-amarillo-osc)}
+#btnModoZona.visible{display:inline-flex;align-items:center}
+#btnModoZona.activo{background:var(--mde-amarillo);border-color:var(--mde-amarillo-osc);
+  box-shadow:0 3px 10px rgba(201,154,0,.35)}
+#btnModoZona.activo::before{content:"◉";color:#5C4400}
+/* franja que encabeza los resultados en modo por zona: sin ella, una tabla
+   sin bandas de distancia se puede confundir con una busqueda por cercania
+   que no encontro mucho. */
+.aviso-modo-zona{background:#FFFCF0;border:1.5px solid var(--mde-amarillo);
+  border-radius:var(--radio-sm);padding:10px 14px;margin:0 0 14px;
+  color:#5C4400;font-size:12.5px;font-weight:600}
 /* en angosto la leyenda ya envuelve; el boton pasa a su propia linea y deja
    de estar pegado al borde derecho. */
 @media (max-width:560px){
-  #btnVeredasMuni{margin-left:0}
+  #btnModoZona{margin-left:0}
 }
 
 .buscar-dir{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px}
@@ -667,14 +680,13 @@ footer.build .autoria{display:inline-block;margin-top:12px;font-size:10.5px;font
             </div>
           </div>
         </div>
-        <!-- El interruptor de la capa de veredas vive aqui, no en la tarjeta
-             de filtros: lo que enciende y apaga es una capa DEL MAPA, y al
-             lado de los tres campos competia con ellos como si fuera un
-             cuarto filtro. Va al extremo derecho de la leyenda (ver el
-             margin-left:auto del CSS), que es la fila que ya explica lo que
-             se ve dibujado. -->
+        <!-- El cambio de modo de consulta vive aqui, no en la tarjeta de
+             filtros: no filtra nada, cambia QUE se lista (lo cercano al pin,
+             o todo lo que hay dentro de la zona). Va al extremo derecho de la
+             leyenda (margin-left:auto), la fila que ya explica lo que se ve
+             dibujado en el mapa. -->
         <div class="leyenda-mapa" id="leyendaBandas">
-          <button type="button" id="btnVeredasMuni">Ocultar el contorno de las demás veredas</button>
+          <button type="button" id="btnModoZona">Ver todas las UDS de la zona</button>
         </div>
         <!-- Debajo del mapa, en la columna del mapa: es el espacio que
              quedaba sin usar, y ahi el formulario recupera el ancho para el
@@ -1285,16 +1297,41 @@ V.corregimientos.forEach((c, i) => { (CORR_POR_MUNI[c.m] = CORR_POR_MUNI[c.m] ||
 // grande puede tener UDS mas alla del radio que uso la busqueda por cercania,
 // y para "que UDS hay en esta vereda" esas cuentan igual). Se arma una sola
 // vez sobre los 4328 puntos, no en cada busqueda.
-const UDS_POR_VEREDA = {}, UDS_POR_CORR = {};
+const UDS_POR_VEREDA = {}, UDS_POR_CORR = {}, UDS_POR_MUNI = {};
 D.puntos.forEach(p => {
   const a = V.uds[p.id];
   if (!a) return;
   (UDS_POR_VEREDA[a[0]] = UDS_POR_VEREDA[a[0]] || []).push(p);
   if (a.length > 1) (UDS_POR_CORR[a[1]] = UDS_POR_CORR[a[1]] || []).push(p);
+  // por municipio se agrupa a traves de la vereda que contiene la UDS, no
+  // por su "Municipio UDS" declarado: son 85 las UDS cuyo municipio escrito
+  // no coincide con el poligono donde cae su coordenada, y aqui lo que se
+  // pregunta es justamente que hay DENTRO del poligono.
+  const m = V.veredas[a[0]].m;
+  (UDS_POR_MUNI[m] = UDS_POR_MUNI[m] || []).push(p);
 });
 function udsDeZona(t) {
   if (!t) return [];
+  if (t.tipo === "muni") return UDS_POR_MUNI[t.idx] || [];
   return (t.tipo === "corr" ? UDS_POR_CORR[t.idx] : UDS_POR_VEREDA[t.idx]) || [];
+}
+// La zona mas especifica que este filtrada ahora mismo: vereda > corregimiento
+// > municipio. Es la que usa el modo "sin radio" para listar todo lo que hay
+// dentro. Devuelve null si no hay ni municipio elegido.
+function zonaActiva() {
+  // Solo cuenta la zona que el usuario ELIGIO. Corregimiento y vereda tambien
+  // se rellenan solos al mover el pin (ver sincronizarTerritorioConPunto), y
+  // esos no deben acotar el listado: si solo se filtro el municipio, "todas
+  // las UDS" son las del municipio entero.
+  if (TERRITORIO && TERRITORIO_ELEGIDO) {
+    const z = TERRITORIO.tipo === "corr" ? V.corregimientos[TERRITORIO.idx] : V.veredas[TERRITORIO.idx];
+    const etiq = TERRITORIO.tipo === "corr" ? "el corregimiento"
+      : ((z.t && z.t !== "VE") ? "la zona" : "la vereda");
+    return { tipo: TERRITORIO.tipo, idx: TERRITORIO.idx, nombre: z.n, etiqueta: etiq };
+  }
+  const im = idxMuniActual();
+  if (im < 0) return null;
+  return { tipo: "muni", idx: im, nombre: V.municipios[im], etiqueta: "el municipio de" };
 }
 // esta UDS cae dentro de la zona que se esta mirando? (para marcar su fila en
 // las tablas por banda de distancia, sin tener que cruzarlas a ojo)
@@ -1358,6 +1395,12 @@ const ESTILO_REALCE_ZONA = { color: "#FFFFFF", weight: 6, opacity: 0.65, fill: f
 // cualquier otra via. "tipo" recuerda a que nivel se esta mirando para no
 // degradar un corregimiento elegido a la vereda suelta donde cayo el pin.
 let TERRITORIO = null;      // {tipo:"corr"|"vereda", idx}
+// Distingue una zona ELEGIDA por el usuario de una que solo se autocompleto
+// con el pin. Importa para el modo por zona: al elegir un municipio, el
+// sitio rellena solo corregimiento y vereda segun donde cayo el pin, asi
+// que sin esta bandera "ver todas las UDS de Ituango" listaba unicamente
+// las de la vereda donde estaba el pin (7 en vez de 38).
+let TERRITORIO_ELEGIDO = false;
 // Filtros encadenados, como en un Excel: municipio acota corregimiento y
 // vereda, y el corregimiento acota a su vez la lista de veredas. Por defecto
 // la lista de veredas se restringe al corregimiento que este activo; ese
@@ -1376,8 +1419,15 @@ function corrActual() {
 }
 let CAPA_ZONA = null;       // poligono resaltado de la zona actual
 let CAPA_VEREDAS_CTX = null;// contorno tenue de las demas veredas del municipio
-let VER_VEREDAS_CTX = true;
 let LIENZO = null;          // renderer canvas (ver initMapaBase)
+// Modo de consulta. false (por defecto) = "por cercania": se dibujan los
+// anillos y se listan las UDS dentro del radio adaptativo. true = "por zona":
+// no hay radio ni anillos, y se listan TODAS las UDS que caen dentro del
+// poligono de lo que este filtrado (vereda, corregimiento o municipio).
+// Responde una pregunta distinta -- "que hay en esta zona" en vez de "que hay
+// cerca de este punto" -- y por eso cambia tambien como se pintan los
+// resultados: sin bandas de distancia, una sola tabla.
+let SIN_RADIO = false;
 
 function idxMuniActual() {
   if (!MUNI) return -1;
@@ -1468,7 +1518,7 @@ function dibujarVeredasContexto() {
   if (!MAPA) return;
   if (CAPA_VEREDAS_CTX) { MAPA.removeLayer(CAPA_VEREDAS_CTX); CAPA_VEREDAS_CTX = null; }
   const im = idxMuniActual();
-  if (im < 0 || !VER_VEREDAS_CTX) return;
+  if (im < 0) return;
   const idxs = VEREDAS_POR_MUNI[im] || [];
   if (!idxs.length) return;
   const polys = [];
@@ -1529,7 +1579,7 @@ function pintarCamposTerritorio() {
 function sincronizarTerritorioConPunto() {
   if (!PUNTO) return;
   const im = idxMuniActual();
-  if (im < 0) { TERRITORIO = null; pintarCamposTerritorio(); return; }
+  if (im < 0) { TERRITORIO = null; TERRITORIO_ELEGIDO = false; pintarCamposTerritorio(); return; }
   // si se venia mirando un corregimiento y el pin sigue dentro de el, se
   // respeta ese nivel -- si no, el corregimiento elegido se perderia apenas
   // se arrastra el pin unos metros dentro de su propia vereda.
@@ -1548,7 +1598,14 @@ function sincronizarTerritorioConPunto() {
     return;
   }
   const antes = TERRITORIO;
+  // si es la MISMA vereda que ya estaba, no se toca la bandera: al elegir una
+  // vereda el pin salta a su centro y esta funcion la vuelve a detectar --
+  // sin esta condicion, esa deteccion marcaba como "autocompletada" la vereda
+  // que el usuario acababa de elegir, y el modo por zona se iba al municipio
+  // entero (38 UDS en vez de las 2 de la vereda).
+  const misma = antes && antes.tipo === "vereda" && antes.idx === encontrada;
   TERRITORIO = { tipo: "vereda", idx: encontrada };
+  if (!misma) TERRITORIO_ELEGIDO = false;   // la detecto el pin, no la pidio el usuario
   if (!antes || antes.tipo !== "vereda" || antes.idx !== encontrada) {
     pintarCamposTerritorio();
     dibujarZona(false); // sin reencuadrar: el pin ya esta donde el usuario lo puso
@@ -1559,6 +1616,7 @@ function sincronizarTerritorioConPunto() {
 // ajusta a ella -- mismo comportamiento que elegir municipio.
 function seleccionarZona(tipo, idx) {
   TERRITORIO = { tipo: tipo, idx: idx };
+  TERRITORIO_ELEGIDO = true;
   const z = tipo === "corr" ? V.corregimientos[idx] : V.veredas[idx];
   // el municipio de la zona manda: elegir una vereda de otro municipio
   // arrastra tambien el filtro de municipio, no lo deja desincronizado.
@@ -1609,6 +1667,27 @@ function actualizarPlaceholderVereda() {
     : n + (n === 1 ? " vereda en " : " veredas en ") + V.corregimientos[restr].n;
 }
 
+// El rotulo nombra la zona concreta que se va a listar ("Ver todas las UDS de
+// Santa Rita") en vez de un generico: lo que hace el boton cambia segun si
+// hay vereda, corregimiento o solo municipio filtrado, y asi se sabe de
+// antemano que va a pasar al pulsarlo.
+function actualizarBotonModo() {
+  const b = $("#btnModoZona");
+  if (!b) return;
+  const z = zonaActiva();
+  b.classList.toggle("activo", SIN_RADIO);
+  if (SIN_RADIO) {
+    b.textContent = "Volver al radio de cercanía";
+    b.title = "Vuelve a listar solo las UDS cercanas al pin";
+    return;
+  }
+  b.textContent = z ? "Ver todas las UDS de " + z.nombre : "Ver todas las UDS de la zona";
+  b.title = z
+    ? "Lista todas las UDS dentro de " + z.etiqueta + " " + z.nombre +
+      ", sin importar a que distancia queden del pin"
+    : "Lista todas las UDS de la zona filtrada";
+}
+
 function limpiarListasTerritorio() {
   $("#listaCorregimientos").innerHTML = "";
   $("#listaVeredas").innerHTML = "";
@@ -1627,7 +1706,8 @@ function habilitarFiltrosTerritorio(activo) {
     : "Elige primero un municipio";
   actualizarPlaceholderVereda();
   if (!nCorr) iCorr.disabled = true;
-  $("#btnVeredasMuni").classList.toggle("visible", activo && nVer > 0);
+  $("#btnModoZona").classList.toggle("visible", activo);
+  actualizarBotonModo();
 }
 
 function renderListaCorregimientos(filtro) {
@@ -2078,6 +2158,7 @@ function sincronizarMunicipioConPunto() {
   // que pasar a las de ESE municipio, y el contorno veredal de contexto
   // tambien (si no, se quedarian mostrando las del municipio anterior).
   TERRITORIO = null;
+  TERRITORIO_ELEGIDO = false;
   VER_TODAS_VEREDAS = false; // cambiar de municipio reinicia el encadenamiento de filtros
   habilitarFiltrosTerritorio(true);
   limpiarListasTerritorio();
@@ -2142,6 +2223,117 @@ function pintarBloqueTerritorio(cont) {
   cont.appendChild(caja);
 }
 
+// Pinta en el mapa un marcador por UDS. Se usa igual en los dos modos de
+// consulta (por cercania y por zona), asi que vive aparte en vez de estar
+// incrustada dentro de buscarYPintar.
+function pintarMarcadores(lista) {
+  if (!MAPA) return;
+  lista.forEach(({ p, d }) => {
+    const color = colorCupos(p);
+    const m = L.circleMarker([p.y, p.x], { radius: 6, color: "#fff", weight: 1.5, fillColor: color, fillOpacity: 0.9 }).addTo(MAPA);
+    // al pasar el mouse (resumen rapido, sin clic) se llena el panel fijo
+    // #infoUds, arriba del mapa -- ver contenidoInfoUds() e INFO_UDS_VACIO
+    // mas arriba para el porque de usar un panel fijo en vez de un
+    // tooltip flotante. Distinto del popup de abajo (con clic, mas
+    // completo, se abre sobre el mapa mismo).
+    m.on("mouseover", () => { HOVER_UDS = true; mostrarInfoUds(p); });
+    m.on("mouseout", (e) => {
+      HOVER_UDS = false;
+      // al salir del punto el cursor sigue sobre el mapa: en vez de dejar
+      // el panel vacio, se vuelve a mostrar la zona que hay debajo.
+      ZONA_HOVER = -1;
+      const ll = e && e.latlng;
+      if (ll) actualizarHoverZona(ll.lat, ll.lng); else limpiarInfo();
+    });
+    m.bindPopup("<b>" + esc(p.n || "(sin nombre)") + "</b>" +
+      (p.dir ? "<br>" + esc(p.dir) : "") +
+      "<br>" + esc(p.mun || "—") + (p.co ? " · " + esc(p.co) : "") + (p.b ? " · " + esc(p.b) : "") +
+      "<br>Entidad: " + esc(p.en || "—") +
+      "<br>Centro Zonal: " + esc((p.cz || "—").replace(/^CZ\s*/, "")) +
+      (p.tel ? "<br>Tel: " + esc(p.tel) : "") +
+      "<br>Cupos: " + mil(p.cu) + " · Atendidos: " + mil(p.at) + " · " + chipCupos(p) +
+      "<br>" + fmtDist(d));
+    m.off("click");
+    m.on("click", (e) => {
+      // los circleMarker burbujean su clic hacia el mapa por defecto
+      // (bubblingMouseEvents), y el mapa tiene su propio "click" para
+      // mover el pin y re-buscar (ver initMapaBase) -- sin cortar la
+      // propagacion aqui, ese click en cascada reconstruye toda la tabla
+      // de Resultados justo despues de resaltarFila() y deja el punto de
+      // referencia saltando a la UDS en la que se hizo clic.
+      L.DomEvent.stopPropagation(e);
+      // el clic queda reservado para ir a la fila (resaltarFila) -- el
+      // resumen rapido ya lo cubre el tooltip al pasar el mouse (hover),
+      // sin competir con un popup que se queda abierto hasta cerrarlo a
+      // mano. bindPopup() se deja igual mas abajo porque abrirPopup()
+      // (camino inverso: clic en la fila -> se abre en el mapa) todavia
+      // lo necesita.
+      resaltarFila(p.id);
+    });
+    if (p.id != null) MARCADOR_POR_ID[p.id] = m;
+    RES_MARKERS.push(m);
+  });
+}
+
+/* ---------------- modo por zona (sin radio de cercania) ----------------
+   Responde "que UDS hay dentro de esta zona", no "cuales quedan cerca del
+   pin". Por eso no hay anillos ni bandas de distancia: una sola tabla con
+   todo lo que cae dentro del poligono filtrado. La distancia al pin se
+   conserva como columna -- sigue siendo util para ordenar -- pero ya no
+   decide que entra y que no. */
+function pintarModoZona(zona, lista, resWrap, sub, dlWrap, mantenerVista) {
+  const cupos = lista.reduce((s, x) => s + (x.p.cu || 0), 0);
+  const disp = lista.reduce((s, x) => s + Math.max(0, disponibles(x.p)), 0);
+  sub.textContent = lista.length
+    ? lista.length + (lista.length === 1 ? " unidad de servicio" : " unidades de servicio") +
+      " en " + zona.etiqueta + " " + zona.nombre + " · " + mil(cupos) + " cupos · " +
+      mil(disp) + " disponibles"
+    : "sin unidades de servicio en " + zona.etiqueta + " " + zona.nombre;
+
+  if (dlWrap && lista.length) {
+    dlWrap.appendChild(botonDescargaExcel(() => lista.map(x => x.p), () => zona.nombre));
+  }
+
+  resWrap.innerHTML = "";
+  const aviso = el("p", "nota aviso-modo-zona",
+    "Mostrando <b>todas</b> las UDS dentro de " + esc(zona.etiqueta) + " <b>" + esc(zona.nombre) +
+    "</b>, sin importar a qué distancia queden del pin. " +
+    "El radio de cercanía está desactivado.");
+  resWrap.appendChild(aviso);
+
+  if (!lista.length) {
+    resWrap.appendChild(el("p", "nota",
+      "No hay ninguna UDS georreferenciada dentro de esa zona."));
+  } else {
+    const cols = [
+      { label: "Código", get: x => x.p.id != null ? String(x.p.id) : "—", numeric: false },
+      { label: "Nombre UDS", get: x => x.p.n || "(sin nombre)", numeric: false },
+      { label: "Entidad", get: x => x.p.en || "—", numeric: false },
+      { label: "Centro Zonal", get: x => (x.p.cz || "—").replace(/^CZ\s*/, ""), numeric: false },
+      { label: "Municipio", get: x => x.p.mun || "—", numeric: false },
+      { label: "Corregimiento", get: x => nombreCorrDeUds(x.p.id) || "—", numeric: false },
+      { label: "Vereda", get: x => nombreVeredaDeUds(x.p.id) || "—", numeric: false },
+      { label: "Dirección", get: x => x.p.dir || "—", numeric: false },
+      { label: "Teléfono", get: x => x.p.tel || "—", numeric: false },
+      { label: "Cupos", get: x => x.p.cu, fmt: x => mil(x.p.cu) },
+      { label: "Atendidos", get: x => x.p.at, fmt: x => mil(x.p.at) },
+      { label: "Disponibles", get: x => disponibles(x.p), fmt: x => chipCupos(x.p) },
+      { label: "Distancia al pin", get: x => x.d, fmt: x => fmtDist(x.d) },
+    ];
+    resWrap.appendChild(tabla(cols, lista, {
+      sortCol: 12, sortAsc: true, getId: x => x.p.id, onRowClick: x => abrirPopup(x.p.id),
+    }));
+  }
+
+  pintarMarcadores(lista);
+  // encuadre a la zona completa, no al pin: lo que se esta mirando es el
+  // poligono entero.
+  if (MAPA && !mantenerVista) {
+    const capa = CAPA_ZONA || POLIGONO_MUNI;
+    if (capa && capa.getBounds) MAPA.fitBounds(capa.getBounds(), { padding: [10, 10], animate: false });
+  }
+}
+
 function buscarYPintar(mantenerVista) {
   const resWrap = $("#resultados");
   const sub = $("#subResultados");
@@ -2167,6 +2359,21 @@ function buscarYPintar(mantenerVista) {
   actualizarLatLon();
   sincronizarMunicipioConPunto();
   sincronizarTerritorioConPunto();
+  actualizarBotonModo();
+  // MODO POR ZONA: no hay radio ni anillos. Se listan todas las UDS que caen
+  // dentro del poligono de lo que este filtrado -- vereda, corregimiento o
+  // municipio, lo mas especifico que haya. Se sigue calculando la distancia
+  // al pin porque ordenar por ella sigue siendo util, pero ya no filtra.
+  const zona = SIN_RADIO ? zonaActiva() : null;
+  if (zona) {
+    ANILLOS.forEach(a => MAPA && MAPA.removeLayer(a));
+    ANILLOS = [];
+    const lista = udsDeZona(zona)
+      .map(p => ({ p, d: distMetros(PUNTO.lat, PUNTO.lon, p.y, p.x) }))
+      .sort((a, b) => a.d - b.d);
+    pintarModoZona(zona, lista, resWrap, sub, dlWrap, mantenerVista);
+    return;
+  }
   const { items, radioFinal } = buscarCercanas(PUNTO.lat, PUNTO.lon);
   const bandas = bandasDe(radioFinal);
   BANDAS_ACTUALES = bandas;
@@ -2256,51 +2463,7 @@ function buscarYPintar(mantenerVista) {
   }
 
   if (MAPA) {
-    items.forEach(({ p, d }) => {
-      const color = colorCupos(p);
-      const m = L.circleMarker([p.y, p.x], { radius: 6, color: "#fff", weight: 1.5, fillColor: color, fillOpacity: 0.9 }).addTo(MAPA);
-      // al pasar el mouse (resumen rapido, sin clic) se llena el panel fijo
-      // #infoUds, arriba del mapa -- ver contenidoInfoUds() e INFO_UDS_VACIO
-      // mas arriba para el porque de usar un panel fijo en vez de un
-      // tooltip flotante. Distinto del popup de abajo (con clic, mas
-      // completo, se abre sobre el mapa mismo).
-      m.on("mouseover", () => { HOVER_UDS = true; mostrarInfoUds(p); });
-      m.on("mouseout", (e) => {
-        HOVER_UDS = false;
-        // al salir del punto el cursor sigue sobre el mapa: en vez de dejar
-        // el panel vacio, se vuelve a mostrar la zona que hay debajo.
-        ZONA_HOVER = -1;
-        const ll = e && e.latlng;
-        if (ll) actualizarHoverZona(ll.lat, ll.lng); else limpiarInfo();
-      });
-      m.bindPopup("<b>" + esc(p.n || "(sin nombre)") + "</b>" +
-        (p.dir ? "<br>" + esc(p.dir) : "") +
-        "<br>" + esc(p.mun || "—") + (p.co ? " · " + esc(p.co) : "") + (p.b ? " · " + esc(p.b) : "") +
-        "<br>Entidad: " + esc(p.en || "—") +
-        "<br>Centro Zonal: " + esc((p.cz || "—").replace(/^CZ\s*/, "")) +
-        (p.tel ? "<br>Tel: " + esc(p.tel) : "") +
-        "<br>Cupos: " + mil(p.cu) + " · Atendidos: " + mil(p.at) + " · " + chipCupos(p) +
-        "<br>" + fmtDist(d));
-      m.off("click");
-      m.on("click", (e) => {
-        // los circleMarker burbujean su clic hacia el mapa por defecto
-        // (bubblingMouseEvents), y el mapa tiene su propio "click" para
-        // mover el pin y re-buscar (ver initMapaBase) -- sin cortar la
-        // propagacion aqui, ese click en cascada reconstruye toda la tabla
-        // de Resultados justo despues de resaltarFila() y deja el punto de
-        // referencia saltando a la UDS en la que se hizo clic.
-        L.DomEvent.stopPropagation(e);
-        // el clic queda reservado para ir a la fila (resaltarFila) -- el
-        // resumen rapido ya lo cubre el tooltip al pasar el mouse (hover),
-        // sin competir con un popup que se queda abierto hasta cerrarlo a
-        // mano. bindPopup() se deja igual mas abajo porque abrirPopup()
-        // (camino inverso: clic en la fila -> se abre en el mapa) todavia
-        // lo necesita.
-        resaltarFila(p.id);
-      });
-      if (p.id != null) MARCADOR_POR_ID[p.id] = m;
-      RES_MARKERS.push(m);
-    });
+    pintarMarcadores(items);
     // UDS que estan dentro de la zona elegida pero quedaron FUERA del radio de
     // busqueda: sin esto la tabla del bloque de zona listaria unidades que no
     // aparecen por ninguna parte del mapa. Se dibujan con anillo amarillo (el
@@ -2505,6 +2668,7 @@ function onMunicipioChange(nombre) {
     $("#candidatosDir").innerHTML = "";
     if (MARKER && MAPA) { MAPA.removeLayer(MARKER); MARKER = null; }
     TERRITORIO = null;
+    TERRITORIO_ELEGIDO = false;
     VER_TODAS_VEREDAS = false;
     pintarCamposTerritorio();
     habilitarFiltrosTerritorio(false);
@@ -2529,6 +2693,7 @@ function onMunicipioChange(nombre) {
   // listas pasan a las de este municipio. La vereda concreta la vuelve a
   // deducir sincronizarTerritorioConPunto en cuanto el pin quede puesto.
   TERRITORIO = null;
+  TERRITORIO_ELEGIDO = false;
   VER_TODAS_VEREDAS = false; // cambiar de municipio reinicia el encadenamiento de filtros
   pintarCamposTerritorio();
   habilitarFiltrosTerritorio(true);
@@ -2611,12 +2776,10 @@ function init() {
       pintarCamposTerritorio(); // si escribio algo y no eligio nada, se restaura el valor real
     }, 150);
   });
-  $("#btnVeredasMuni").onclick = () => {
-    VER_VEREDAS_CTX = !VER_VEREDAS_CTX;
-    $("#btnVeredasMuni").textContent = VER_VEREDAS_CTX
-      ? "Ocultar el contorno de las demás veredas"
-      : "Mostrar el contorno de las demás veredas";
-    dibujarVeredasContexto();
+  $("#btnModoZona").onclick = () => {
+    SIN_RADIO = !SIN_RADIO;
+    actualizarBotonModo();
+    buscarYPintar();
   };
 
   const inputDir = $("#inputDir"), btnBuscar = $("#btnBuscar");
