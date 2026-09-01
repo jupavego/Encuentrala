@@ -182,6 +182,20 @@ function anillosDe(clave, codificado) {
 function anillosVereda(i) { return anillosDe("v" + i, V.veredas[i].g); }
 function anillosCorr(i) { return anillosDe("c" + i, V.corregimientos[i].g); }
 
+// ray-casting par/impar clasico sobre un anillo. Base comun de las dos
+// pruebas de pertenencia del sitio: puntoEnGeom() aqui abajo (veredas y
+// corregimientos, forma anidada con huecos explicitos) y puntoEnPoligono()
+// mas abajo (municipios, lista plana de anillos).
+function puntoEnAnillo(lat, lon, anillo) {
+  let dentro = false;
+  for (let i = 0, j = anillo.length - 1; i < anillo.length; j = i++) {
+    const yi = anillo[i][0], xi = anillo[i][1];
+    const yj = anillo[j][0], xj = anillo[j][1];
+    const cruza = (yi > lat) !== (yj > lat) && lon < (xj - xi) * (lat - yi) / (yj - yi) + xi;
+    if (cruza) dentro = !dentro;
+  }
+  return dentro;
+}
 // punto dentro de un multi-poligono con huecos: dentro del anillo exterior de
 // alguno de sus poligonos y fuera de los huecos de ESE poligono.
 function puntoEnGeom(lat, lon, polys) {
@@ -843,19 +857,11 @@ function actualizarLatLon() {
 }
 
 /* ---------------- municipio <- punto (camino inverso a onMunicipioChange) --------------- */
-// ray-casting par/impar clasico; anillos combinados por XOR para soportar
-// huecos si algun poligono llegara a traerlos (ninguno de los 124 los
-// trae hoy, pero la fuente es un geojson externo, no hay garantia futura).
-function puntoEnAnillo(lat, lon, anillo) {
-  let dentro = false;
-  for (let i = 0, j = anillo.length - 1; i < anillo.length; j = i++) {
-    const yi = anillo[i][0], xi = anillo[i][1];
-    const yj = anillo[j][0], xj = anillo[j][1];
-    const cruza = (yi > lat) !== (yj > lat) && lon < (xj - xi) * (lat - yi) / (yj - yi) + xi;
-    if (cruza) dentro = !dentro;
-  }
-  return dentro;
-}
+// XOR de todos los anillos, para soportar huecos si algun poligono municipal
+// llegara a traerlos (ninguno de los 124 los trae hoy, pero la fuente es un
+// geojson externo, no hay garantia futura). Distinto de puntoEnGeom(), que
+// usa la forma anidada [poligono][anillo] de las veredas: ahi si se sabe
+// cual anillo es exterior y cuales son huecos, y no hace falta el XOR.
 function puntoEnPoligono(lat, lon, anillos) {
   let dentro = false;
   anillos.forEach(anillo => { if (puntoEnAnillo(lat, lon, anillo)) dentro = !dentro; });

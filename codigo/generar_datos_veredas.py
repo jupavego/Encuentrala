@@ -38,7 +38,7 @@ import re
 import time
 import unicodedata
 
-from shapely.geometry import shape, Point
+from shapely.geometry import shape, Point, Polygon
 from shapely.ops import unary_union
 from shapely.strtree import STRtree
 
@@ -141,12 +141,51 @@ def geom_codificada(geom):
     return fuera
 
 
+def geom_dibujada(geom):
+    """La geometria TAL COMO va a quedar dibujada en el mapa: simplificada a
+    EPS y con las coordenadas redondeadas a PRECISION decimales, que es lo
+    unico que sobrevive a encode_polyline(). Devuelve None si el redondeo la
+    degenera."""
+    g = geom.simplify(EPS, preserve_topology=True)
+    if g.is_empty:
+        return None
+
+    def red(ring):
+        return [(round(x, PRECISION), round(y, PRECISION)) for x, y in ring.coords]
+
+    partes = []
+    for p in (list(g.geoms) if g.geom_type == "MultiPolygon" else [g]):
+        if p.is_empty or p.geom_type != "Polygon":
+            continue
+        try:
+            q = Polygon(red(p.exterior), [red(h) for h in p.interiors])
+            if not q.is_valid:
+                q = q.buffer(0)
+            if not q.is_empty:
+                partes.append(q)
+        except Exception:
+            continue  # anillo degenerado tras redondear: se ignora
+    if not partes:
+        return None
+    u = unary_union(partes)
+    return None if u.is_empty else u
+
+
 def punto_interior(geom):
     """Punto garantizado DENTRO del poligono, para poner ahi el pin al elegir
     la vereda/corregimiento en el filtro. No se usa centroid(): en una vereda
     con forma de C o de herradura -- comunes siguiendo un rio o una cuchilla --
-    el centroide cae afuera, y el pin terminaria en la vereda vecina."""
-    p = geom.representative_point()
+    el centroide cae afuera, y el pin terminaria en la vereda vecina.
+
+    Se calcula sobre la geometria DIBUJADA, no sobre la de precision completa:
+    el pin es una referencia visual, asi que tiene que quedar dentro del
+    contorno que el usuario ve. Calculandolo sobre la completa, 8 veredas y 1
+    corregimiento (de los mas delgados, donde simplificar mueve el borde mas
+    que el ancho de la figura) terminaban con el pin justo por fuera de su
+    propio contorno. Si el redondeo degenera la figura se cae de vuelta a la
+    geometria completa, que es mejor que no tener punto."""
+    base = geom_dibujada(geom) or geom
+    p = base.representative_point()
     return [round(p.y, 6), round(p.x, 6)]
 
 
