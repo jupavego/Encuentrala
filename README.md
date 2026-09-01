@@ -33,6 +33,36 @@ mensaje si están desfasados.
 tiempo de construcción — el sitio final no depende de nada externo salvo Leaflet,
 los tiles de OpenStreetMap y Nominatim.
 
+## Si el script se detiene diciendo que la hoja no pasó las comprobaciones
+
+`generar_datos_cercania.py` revisa la hoja `CUENTAME` antes de escribir nada:
+
+1. **`Estado de la UDS` tiene que ser categórica** (un puñado de valores distintos).
+2. **`Latitud UDS` tiene que traer coordenadas** en grados/minutos/segundos (≥90% de
+   las filas con valor).
+3. **No puede caer más del 10%** el número de UDS ni de municipios respecto a la
+   última corrida buena (comparado contra el `recursos/datos_cercania.json` del repo).
+
+Si alguna falla, el script aborta **sin escribir ningún archivo** y el sitio publicado
+se queda con los últimos datos buenos.
+
+La causa casi siempre es la misma: **la hoja se volvió a guardar con las columnas
+corridas respecto a su fila de encabezado** (pasa al pegar un export nuevo que trae
+otro orden de columnas, o al insertar/borrar columnas en una parte de la hoja). Pasó
+el 28-08-2026: el `.xlsm` quedó corrido y el script —que entonces no validaba nada—
+leyó 343 UDS en 10 municipios en vez de 4.328 en 125, sin avisar.
+
+**Qué hacer:** recuperar una copia sana del `.xlsm` (historial de versiones de
+OneDrive, o la copia que haya quedado en la carpeta de otra reunión) y volver a
+correr. Si el cambio es intencional y esperado, `--forzar` salta las comprobaciones:
+
+```
+python codigo/generar_datos_cercania.py --forzar
+```
+
+Conviene revisar el `.xlsm` antes de guardarlo: que la primera fila de datos siga
+alineada con su encabezado, sobre todo después de pegar un export nuevo.
+
 ## Fuentes de datos
 
 - **Unidades de Servicio ICBF activas** — BD ANALISIS COBERTURA (Cuéntame), Regional Antioquia.

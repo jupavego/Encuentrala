@@ -17,6 +17,7 @@ import datetime
 import json
 import os
 import re
+import sys
 import unicodedata
 
 import openpyxl
@@ -117,10 +118,30 @@ def txt(r, campo):
     return str(v).strip() if v is not None else None
 
 
+# ---------- comprobaciones de integridad de la hoja ----------
+# El 28-08-2026 esta hoja se guardo con las columnas corridas respecto a su
+# fila de encabezado (los valores de "Estado de la UDS" aparecian en otra
+# columna, "Longitud UDS" devolvia una hora, etc.). El script no se entero:
+# leyo 343 UDS en 10 municipios en vez de 4328 en 125, y habria publicado un
+# sitio con el 92% de la red de servicio faltante sin decir una palabra.
+# Estos contadores se acumulan en la misma pasada de abajo y se revisan antes
+# de escribir nada -- ver validar() despues del bucle.
+estados_vistos = set()
+lat_total = 0
+lat_parseable = 0
+
 puntos = []
 sin_coord = 0
 for r in rows:
-    if r[idx["Estado de la UDS"]] != "ACTIVA":
+    estado = r[idx["Estado de la UDS"]]
+    if estado is not None and len(estados_vistos) <= 200:
+        estados_vistos.add(estado)
+    cruda_lat = r[idx["Latitud UDS"]]
+    if cruda_lat is not None:
+        lat_total += 1
+        if parse_dms(cruda_lat) is not None:
+            lat_parseable += 1
+    if estado != "ACTIVA":
         continue
     lat = parse_dms(r[idx["Latitud UDS"]])
     lon = parse_dms(r[idx["Longitud UDS"]])
@@ -151,6 +172,79 @@ for r in rows:
         "y": lat,
         "x": lon,
     })
+
+def abortar(diagnostico, detalle):
+    raise SystemExit(
+        "\n" + "=" * 72 +
+        "\nLA HOJA FUENTE NO PASO LAS COMPROBACIONES DE INTEGRIDAD\n" +
+        "=" * 72 +
+        "\n\nProblema: " + diagnostico +
+        "\n" + detalle +
+        "\n\nArchivo: " + FUENTE +
+        "\n\nCausa tipica: la hoja CUENTAME se volvio a guardar con las columnas\n"
+        "corridas respecto a su fila de encabezado (pasa al pegar un export\n"
+        "nuevo con distinto orden de columnas, o al insertar/borrar columnas\n"
+        "solo en una parte de la hoja).\n\n"
+        "Que hacer: recupera una copia sana del .xlsm (historial de versiones\n"
+        "de OneDrive, o la copia que quedo en la carpeta de otra reunion) y\n"
+        "vuelve a correr este script. NO se escribio ningun archivo: el sitio\n"
+        "publicado sigue con los ultimos datos buenos.\n"
+        "Si el cambio es intencional, corre con  --forzar  para saltarte esto.\n"
+    )
+
+
+FORZAR = "--forzar" in sys.argv
+
+# 1. La columna de estado tiene que ser categorica. En la hoja sana toma 2
+#    valores distintos; en la corrida del 28-08 tomaba 3.574 (nombres de
+#    entidades, codigos de contrato, "#N/A"...), que es justo la senal de que
+#    esa columna ya no es la que dice el encabezado.
+if not FORZAR and len(estados_vistos) > 20:
+    abortar(
+        '"Estado de la UDS" no parece una columna de estados.',
+        "  Toma mas de %d valores distintos; una columna de estado deberia\n"
+        "  tener un punado (ACTIVA, INACTIVA...).\n"
+        "  Ejemplos de lo que se leyo: %s"
+        % (len(estados_vistos), [str(x)[:45] for x in list(estados_vistos)[:3]])
+    )
+
+# 2. "Latitud UDS" viene como texto en grados/minutos/segundos. En la hoja
+#    sana el 100% de las filas con valor parsea; en la corrida, el 8%.
+if not FORZAR and lat_total and lat_parseable / float(lat_total) < 0.90:
+    abortar(
+        '"Latitud UDS" no contiene coordenadas.',
+        "  Solo %d de %d valores (%.0f%%) tienen forma de grados/minutos/\n"
+        "  segundos. Se espera practicamente el 100%%."
+        % (lat_parseable, lat_total, 100.0 * lat_parseable / lat_total)
+    )
+
+# 3. Regresion contra el ultimo resultado bueno (el JSON que ya esta en el
+#    repo): una caida fuerte del numero de UDS o de municipios significa que
+#    algo se rompio aguas arriba, aunque las dos comprobaciones de forma
+#    hayan pasado. Es la red de seguridad general.
+if not FORZAR and os.path.exists(OUT):
+    try:
+        with open(OUT, encoding="utf-8") as f:
+            previo = json.load(f)["meta"]
+    except Exception:
+        previo = None
+    if previo:
+        munis_nuevos = len({p["mun"] for p in puntos})
+        if puntos and previo.get("n_uds") and len(puntos) < 0.9 * previo["n_uds"]:
+            abortar(
+                "se perdieron UDS respecto a la ultima corrida buena.",
+                "  Antes: %d UDS en %d municipios\n  Ahora: %d UDS en %d municipios"
+                % (previo["n_uds"], previo.get("n_municipios", 0), len(puntos), munis_nuevos)
+            )
+        if previo.get("n_municipios") and munis_nuevos < 0.9 * previo["n_municipios"]:
+            abortar(
+                "se perdieron municipios respecto a la ultima corrida buena.",
+                "  Antes: %d municipios\n  Ahora: %d municipios"
+                % (previo["n_municipios"], munis_nuevos)
+            )
+
+print("Comprobaciones de integridad: OK (%d estados distintos, %.0f%% de latitudes legibles)"
+      % (len(estados_vistos), 100.0 * lat_parseable / lat_total if lat_total else 0))
 
 # ---------- poligonos reales de los municipios ----------
 # "antioquia_con_comunas v5.geojson": 146 features = 124 municipios (uno por
