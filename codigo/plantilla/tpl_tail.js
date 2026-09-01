@@ -170,13 +170,23 @@ function filaCuentame(id) {
   if (!cruda) return null;
   return cruda.map(v => (typeof v === "number" && v < 0) ? X.textos[-v - 1] : v);
 }
+// Dos columnas propias al final, despues de las 56 de CUENTAME: la zona que
+// ESTE sitio le atribuyo a cada UDS cruzando su coordenada contra el mapa
+// veredal. Van rotuladas aparte a proposito -- no salen del reporte
+// Cuentame, y CUENTAME ya trae un "Centro Poblado UDS" que es otra cosa y no
+// siempre coincide. Ver la nota de precision del README.
+const COLS_PROPIAS = [
+  "Corregimiento (mapa veredal Antioquia)",
+  "Vereda (mapa veredal Antioquia)",
+];
 // puntos = lista de UDS (objetos de D.puntos) tal como se ven en una tabla.
-// Devuelve las mismas filas y columnas del reporte CUENTAME original.
+// Devuelve las filas y columnas del reporte CUENTAME original, mas las dos
+// columnas de zona de este sitio.
 function filasCuentameDe(puntos) {
-  const filas = [X.cols.slice()];
+  const filas = [X.cols.concat(COLS_PROPIAS)];
   puntos.forEach(p => {
     const f = filaCuentame(p.id);
-    if (f) filas.push(f);
+    if (f) filas.push(f.concat([nombreCorrDeUds(p.id) || "", nombreVeredaDeUds(p.id) || ""]));
   });
   return filas;
 }
@@ -1225,12 +1235,11 @@ function pintarBloqueTerritorio(cont) {
     "<span>" + mil(disp) + " disponibles</span>" +
     "</span>";
   caja.appendChild(head);
-  if (lista.length) {
-    // exporta las UDS de la zona (todas, sin importar la distancia al pin),
-    // que es justo lo que esta tabla muestra.
-    head.querySelector(".bt-badges").appendChild(
-      botonDescargaExcel(() => udsDeZona(TERRITORIO), () => tipoTxt + " " + z.n, "btn-excel bt-excel"));
-  }
+  // La descarga a Excel vive en un unico lugar: a la derecha del titulo
+  // "Resultados" (ver buscarYPintar). Este bloque llego a tener su propio
+  // boton y se quito a proposito -- dos botones identicos a media pantalla
+  // de distancia obligaban a leer cual exportaba que, y la cabecera de
+  // zona quedaba recargada.
   if (!lista.length) {
     caja.appendChild(el("p", "nota", "No hay ninguna UDS georreferenciada dentro de " +
       (esCorr ? "este corregimiento" : "esta vereda") +

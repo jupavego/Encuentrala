@@ -13,27 +13,42 @@ const html = fs.readFileSync(path.join(RAIZ, "DONDE LO UBICO - Cercania UDS Anti
 const js = html.replace(/\r\n/g, "\n").match(/<script>\n([\s\S]*)\n<\/script>/)[1];
 
 // se toma el bloque del escritor tal cual quedo en el sitio publicado
-const desde = js.indexOf("const CRC_TABLA");
-const hasta = js.indexOf("/* ---------------- disponibilidad de cupos");
-if (desde < 0 || hasta < 0) throw new Error("no se encontro el bloque del escritor xlsx");
-const bloque = js.slice(desde, hasta);
+function recorte(desdeTexto, hastaTexto, que) {
+  const a = js.indexOf(desdeTexto);
+  const b = js.indexOf(hastaTexto, a);
+  if (a < 0 || b < 0) throw new Error(`no se encontro ${que} en el sitio generado`);
+  return js.slice(a, b);
+}
+const bloque = recorte("const CRC_TABLA",
+  "/* ---------------- disponibilidad de cupos", "el bloque del escritor xlsx");
+// filasCuentameDe() agrega dos columnas propias (corregimiento y vereda del
+// mapa veredal) y para eso llama a nombreCorrDeUds/nombreVeredaDeUds, que
+// viven mas abajo en el archivo. Se recortan tambien -- del sitio real, no
+// como copia aqui -- para que la prueba siga ejercitando el codigo publicado.
+const bloqueZona = recorte("function territorioDeUds", "const COLOR_ZONA",
+  "las funciones de zona por UDS");
 
 // los datos reales embebidos
-const mX = js.match(/^const X = (\{[\s\S]*?\});$/m);
-if (!mX) throw new Error("no se encontro const X");
-const X = JSON.parse(mX[1]);
+function datos(nombre) {
+  const m = js.match(new RegExp("^const " + nombre + " = (\\{[\\s\\S]*?\\});$", "m"));
+  if (!m) throw new Error(`no se encontro const ${nombre}`);
+  return JSON.parse(m[1]);
+}
+const X = datos("X");
+const V = datos("V");
 
-const ctx = { X, document: null, URL: null };
-const fn = new Function("X", bloque + "\nreturn { armarZip, hojaXml, filasCuentameDe, filaCuentame, letraCol, escXml };");
-const api = fn(X);
+const fn = new Function("X", "V",
+  bloqueZona + "\n" + bloque +
+  "\nreturn { armarZip, hojaXml, filasCuentameDe, filaCuentame, letraCol, escXml };");
+const api = fn(X, V);
 
 // comprobaciones baratas de letraCol antes de nada
-const esperado = { 0: "A", 25: "Z", 26: "AA", 51: "AZ", 52: "BA", 55: "BD" };
+const esperado = { 0: "A", 25: "Z", 26: "AA", 51: "AZ", 52: "BA", 55: "BD", 57: "BF" };
 for (const [i, l] of Object.entries(esperado)) {
   const got = api.letraCol(Number(i));
   if (got !== l) throw new Error(`letraCol(${i}) = ${got}, se esperaba ${l}`);
 }
-console.log("letraCol: OK (A..BD para las 56 columnas)");
+console.log("letraCol: OK (A..BF, 56 columnas de CUENTAME + 2 propias)");
 
 // se exporta una muestra real: las primeras 40 UDS del reporte
 const ids = Object.keys(X.filas).slice(0, 40);

@@ -108,33 +108,6 @@ header.top .sub{
 
 .panel-mapa .card{padding:14px}
 
-/* franja completa debajo del header, antes del tablero de dos columnas --
-   los dos metodos alternativos de ubicar el punto (direccion por partes,
-   coordenadas), siempre a la vista sin tener que entrar a la tarjeta
-   "2. Marca el punto". */
-.fila-toggles{background:var(--card);border:1px solid var(--rule);border-radius:var(--radio-sm);
-  margin:0 0 20px;box-shadow:var(--shadow);overflow:hidden}
-.toggle-extra{margin:0;min-width:0}
-/* el <summary> es el disparador nativo de <details> -- se estira a todo
-   el ancho de la tarjeta (no solo el texto) para que toda la franja sea
-   clicable, con un icono real (chevron en insignia circular, mismo patron
-   que .grupo-banda mas abajo) que rota al abrir. Paleta amarilla propia
-   (no verde) para que se sienta mas vistoso y distinto del resto del
-   sitio, en linea con la caja amarilla que ya usa el formulario abierto. */
-.toggle-extra summary{cursor:pointer;display:flex;align-items:center;justify-content:space-between;
-  gap:14px;font-size:13.5px;font-weight:800;color:#5C4400;
-  list-style:none;padding:15px 22px;user-select:none;
-  background:linear-gradient(120deg,#FFFBEA 0%,#FFEFB0 100%);
-  transition:background .18s}
-.toggle-extra summary:hover{background:linear-gradient(120deg,#FFF6D6,#FFE68A)}
-.toggle-extra summary::-webkit-details-marker{display:none}
-.toggle-extra summary::after{content:"▾";display:flex;align-items:center;justify-content:center;
-  flex:0 0 auto;width:26px;height:26px;border-radius:50%;background:var(--mde-amarillo);
-  color:#5C4400;font-weight:900;font-size:13px;box-shadow:0 3px 8px rgba(201,154,0,.35);
-  transition:transform .25s,background-color .15s,color .15s}
-.toggle-extra[open] summary::after{transform:rotate(-180deg);background-color:var(--mde-amarillo-osc);color:#fff}
-.toggle-extra .direccion-partes{margin:12px 22px 20px}
-
 details.card summary{cursor:pointer;list-style:none}
 details.card summary::-webkit-details-marker{display:none}
 details.card summary h2::before{content:"+  ";color:var(--icbf-verde)}
@@ -147,7 +120,7 @@ details.card[open] summary h2::before{content:"–  "}
 .card:hover{transform:translateY(-3px);box-shadow:var(--shadow-lg)}
 .panel-mapa .card:hover{transform:none;box-shadow:var(--shadow)}
 .card + .card{margin-top:20px}
-.tablero + .card,.tablero + .fila-toggles{margin-top:20px}
+.tablero + .card{margin-top:20px}
 .card h2{font-size:18px;margin-bottom:11px;color:var(--icbf-verde-osc);font-weight:900;letter-spacing:-.2px}
 .card h2 small{font-weight:600;color:var(--ink2);font-family:var(--sans);display:block;margin-top:5px;
   letter-spacing:0;font-size:12px}
@@ -269,24 +242,43 @@ details.card[open] summary h2::before{content:"–  "}
 }
 .candidato:hover{border-color:var(--icbf-verde);color:var(--icbf-verde-osc);background:var(--icbf-verde-suave)}
 
-.direccion-partes{display:flex;flex-wrap:wrap;gap:12px;align-items:end;
-  margin:6px 0 16px;padding:18px 20px;background:#FFFBEA;
-  border:2.5px solid var(--mde-amarillo);border-radius:var(--radio-sm)}
-.direccion-partes > div{flex:1 1 100px;min-width:90px}
-.direccion-partes .campo-ancho{flex:2 1 220px}
+/* Vive dentro de la tarjeta "2. Marca el punto", en la columna de 380px --
+   antes era una franja a todo el ancho de la pagina, donde los 6 campos
+   entraban en una sola fila. Aqui no caben asi, y el reparto se ordena a
+   proposito en tres renglones, que ademas es como se dicta una direccion:
+       Via
+       Numero # Cruce - Placa
+       Complemento
+   Borde de 1.5px (antes 2.5) y amarillo suave: dentro de una tarjeta ya
+   contenida no necesita gritar tanto como cuando era una franja suelta. */
+.direccion-partes{display:flex;flex-wrap:wrap;gap:9px 8px;align-items:end;
+  margin:14px 0 0;padding:14px;background:#FFFCF0;
+  border:1.5px solid var(--mde-amarillo);border-radius:var(--radio-sm)}
+/* en esta columna todo va a renglon completo salvo la fila de numeros, que
+   se reparte internamente (ver .fila-numeros). */
+.direccion-partes > div{flex:1 1 100%}
+.direccion-partes button{width:100%;margin-top:2px}
+/* Numero # Cruce - Placa en un solo renglon: los tres campos se reparten el
+   ancho sobrante y los separadores no consumen nada. */
+.fila-numeros{display:flex;align-items:end;gap:6px}
+.fila-numeros > div{flex:1 1 0;min-width:0}
+.fila-numeros > .separador{flex:0 0 auto}
 /* separador visual "#"/"-" entre los campos numericos (Numero # Cruce -
    Placa), tal como se escribe una direccion colombiana -- alineado con
    align-self:flex-end + altura fija a la caja del input (no a la fila
    completa, que incluye la etiqueta de arriba). */
 .direccion-partes .separador{flex:0 0 auto;min-width:0;align-self:flex-end;
-  height:38px;display:flex;align-items:center;justify-content:center;
-  font-size:19px;font-weight:900;color:var(--mde-amarillo-osc);line-height:1;user-select:none}
-.direccion-partes-titulo{display:none}
-.direccion-partes label{display:block;font-size:10.5px;font-weight:700;color:var(--ink2);
-  text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px;white-space:nowrap}
+  height:36px;display:flex;align-items:center;justify-content:center;
+  font-size:16px;font-weight:900;color:var(--mde-amarillo-osc);line-height:1;user-select:none}
+/* Ya no esta escondido tras un <summary>: al dejar de ser colapsable, el
+   bloque necesita decir por si mismo para que sirve. */
+.direccion-partes-titulo{flex:1 1 100%;margin:0;font-size:12px;font-weight:800;
+  color:#5C4400;font-family:var(--display);line-height:1.35}
+.direccion-partes label{display:block;font-size:9.5px;font-weight:700;color:var(--ink2);
+  text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;white-space:nowrap}
 .direccion-partes select,.direccion-partes input{
-  width:100%;background:#fff;border:2px solid var(--rule2);border-radius:var(--radio-pill);
-  padding:9px 15px;font-size:13.5px;color:var(--ink);font-weight:600;font-family:inherit;
+  width:100%;background:#fff;border:1.5px solid var(--rule2);border-radius:var(--radio-pill);
+  padding:9px 12px;font-size:13px;color:var(--ink);font-weight:600;font-family:inherit;
   transition:border-color .15s}
 .direccion-partes select:hover,.direccion-partes select:focus,
 .direccion-partes input:hover,.direccion-partes input:focus{border-color:var(--mde-amarillo-osc);outline:none}
@@ -473,18 +465,17 @@ table.tabla tbody tr.fila-resaltada{background:var(--mde-amarillo) !important}
 .bloque-territorio .bt-nombre{flex:1 1 200px;font-size:16px;font-weight:900;color:#5C4400;
   font-family:var(--display);letter-spacing:-.2px}
 .bloque-territorio .bt-badges{display:flex;gap:8px;flex-wrap:wrap}
-/* ">" a proposito, no un descendiente cualquiera: el boton de descarga vive
-   dentro de .bt-badges y lleva su propio <span> con el icono. Con el selector
-   descendiente, ese icono heredaba la pildora amarilla de las insignias y
-   aparecia como una etiqueta suelta dentro del boton verde. */
+/* ">" a proposito: solo las insignias de conteo, que son hijas directas,
+   deben llevar la pildora amarilla -- no cualquier <span> que llegue a
+   anidarse aqui dentro. */
 .bloque-territorio .bt-badges > span{font-size:11.5px;font-weight:800;color:#5C4400;
   background:var(--mde-amarillo);padding:4px 12px;border-radius:999px}
 
 /* --------- descarga de la hoja CUENTAME ---------
-   Verde solido (no amarillo): es una ACCION, no una etiqueta de dato, y en el
-   bloque de zona convive con las insignias amarillas de conteo -- si tomara
-   la paleta amarilla se leeria como una insignia mas y no como algo que se
-   puede pulsar. */
+   Un unico boton en toda la pagina, a la derecha del titulo "Resultados".
+   Verde solido (no amarillo): es una ACCION, no una etiqueta de dato -- con
+   la paleta amarilla se leeria como una insignia mas de las que ya hay
+   alrededor, y no como algo que se puede pulsar. */
 .btn-excel{display:inline-flex;align-items:center;gap:7px;cursor:pointer;
   background:var(--icbf-verde);color:#fff;border:none;border-radius:999px;
   padding:7px 16px;font-size:12px;font-weight:800;font-family:var(--display);
@@ -495,8 +486,6 @@ table.tabla tbody tr.fila-resaltada{background:var(--mde-amarillo) !important}
   box-shadow:0 8px 18px rgba(95,168,41,.4)}
 .btn-excel:active{transform:translateY(0)}
 .btn-excel span{font-size:14px;line-height:1}
-/* dentro del bloque de zona el boton va en la misma fila que las insignias */
-.bloque-territorio .bt-badges .btn-excel{margin-left:4px}
 /* cabecera de "Resultados": titulo a la izquierda, boton a la derecha, y en
    pantallas angostas el boton cae debajo en vez de apretar el titulo. */
 .cabecera-resultados{display:flex;align-items:flex-start;justify-content:space-between;
@@ -616,6 +605,56 @@ footer.build .autoria{display:inline-block;margin-top:12px;font-size:10.5px;font
 
         <div class="nota" id="estadoDir"></div>
         <div class="candidatos" id="candidatosDir"></div>
+
+        <!-- Antes vivia en una franja colapsable a lo ancho de la pagina,
+             debajo del tablero. Se sube aqui, a la columna de controles: es
+             el mismo paso ("marca el punto") por otra via, y la columna
+             tenia espacio de sobra porque el mapa de al lado es mas alto.
+             Ya no se colapsa -- si cabe entero, esconderlo solo agrega un
+             clic entre el usuario y el campo que necesita. -->
+        <div class="direccion-partes">
+          <p class="direccion-partes-titulo">¿No encontró la dirección? Ármala por partes</p>
+          <div class="campo-ancho">
+            <label for="viaTipo">Vía</label>
+            <select id="viaTipo">
+              <option>Calle</option>
+              <option>Carrera</option>
+              <option>Avenida</option>
+              <option>Avenida Calle</option>
+              <option>Avenida Carrera</option>
+              <option>Diagonal</option>
+              <option>Transversal</option>
+              <option>Circular</option>
+              <option>Autopista</option>
+              <option value="Vía">Vía (otra)</option>
+            </select>
+          </div>
+          <!-- los tres numeros y sus separadores van en su propio contenedor:
+               sueltos dentro del flex de .direccion-partes, en una columna
+               angosta el "#" y el "-" se envolvian a un renglon aparte,
+               separados de los campos que separan. -->
+          <div class="fila-numeros">
+            <div>
+              <label for="viaNum1">Número</label>
+              <input type="text" id="viaNum1" placeholder="45 o 45A">
+            </div>
+            <div class="separador" aria-hidden="true">#</div>
+            <div>
+              <label for="viaNum2">Cruce</label>
+              <input type="text" id="viaNum2" placeholder="23 o 23B">
+            </div>
+            <div class="separador" aria-hidden="true">-</div>
+            <div>
+              <label for="viaNum3">Placa</label>
+              <input type="text" id="viaNum3" placeholder="10">
+            </div>
+          </div>
+          <div class="campo-ancho">
+            <label for="viaComplemento">Complemento (barrio, vereda, interior… opcional)</label>
+            <input type="text" id="viaComplemento" placeholder="Ej: Barrio Centro, interior 2">
+          </div>
+          <button type="button" id="btnBuscarPartes" disabled>Buscar esta dirección</button>
+        </div>
       </div>
 
     </div>
@@ -641,48 +680,6 @@ footer.build .autoria{display:inline-block;margin-top:12px;font-size:10.5px;font
         <div class="leyenda-mapa" id="leyendaBandas"></div>
       </div>
     </div>
-  </div>
-
-  <div class="fila-toggles">
-    <details class="toggle-extra">
-      <summary>¿No encontró la dirección? Armarla por partes</summary>
-      <div class="direccion-partes">
-        <div>
-          <label for="viaTipo">Vía</label>
-          <select id="viaTipo">
-            <option>Calle</option>
-            <option>Carrera</option>
-            <option>Avenida</option>
-            <option>Avenida Calle</option>
-            <option>Avenida Carrera</option>
-            <option>Diagonal</option>
-            <option>Transversal</option>
-            <option>Circular</option>
-            <option>Autopista</option>
-            <option value="Vía">Vía (otra)</option>
-          </select>
-        </div>
-        <div>
-          <label for="viaNum1">Número</label>
-          <input type="text" id="viaNum1" placeholder="45 o 45A">
-        </div>
-        <div class="separador" aria-hidden="true">#</div>
-        <div>
-          <label for="viaNum2">Cruce</label>
-          <input type="text" id="viaNum2" placeholder="23 o 23B">
-        </div>
-        <div class="separador" aria-hidden="true">-</div>
-        <div>
-          <label for="viaNum3">Placa</label>
-          <input type="text" id="viaNum3" placeholder="10">
-        </div>
-        <div class="campo-ancho">
-          <label for="viaComplemento">Complemento (barrio, vereda, interior… opcional)</label>
-          <input type="text" id="viaComplemento" placeholder="Ej: Barrio Centro, interior 2">
-        </div>
-        <button type="button" id="btnBuscarPartes" disabled>Buscar esta dirección</button>
-      </div>
-    </details>
   </div>
 
   <div class="card">
@@ -878,13 +875,23 @@ function filaCuentame(id) {
   if (!cruda) return null;
   return cruda.map(v => (typeof v === "number" && v < 0) ? X.textos[-v - 1] : v);
 }
+// Dos columnas propias al final, despues de las 56 de CUENTAME: la zona que
+// ESTE sitio le atribuyo a cada UDS cruzando su coordenada contra el mapa
+// veredal. Van rotuladas aparte a proposito -- no salen del reporte
+// Cuentame, y CUENTAME ya trae un "Centro Poblado UDS" que es otra cosa y no
+// siempre coincide. Ver la nota de precision del README.
+const COLS_PROPIAS = [
+  "Corregimiento (mapa veredal Antioquia)",
+  "Vereda (mapa veredal Antioquia)",
+];
 // puntos = lista de UDS (objetos de D.puntos) tal como se ven en una tabla.
-// Devuelve las mismas filas y columnas del reporte CUENTAME original.
+// Devuelve las filas y columnas del reporte CUENTAME original, mas las dos
+// columnas de zona de este sitio.
 function filasCuentameDe(puntos) {
-  const filas = [X.cols.slice()];
+  const filas = [X.cols.concat(COLS_PROPIAS)];
   puntos.forEach(p => {
     const f = filaCuentame(p.id);
-    if (f) filas.push(f);
+    if (f) filas.push(f.concat([nombreCorrDeUds(p.id) || "", nombreVeredaDeUds(p.id) || ""]));
   });
   return filas;
 }
@@ -1933,12 +1940,11 @@ function pintarBloqueTerritorio(cont) {
     "<span>" + mil(disp) + " disponibles</span>" +
     "</span>";
   caja.appendChild(head);
-  if (lista.length) {
-    // exporta las UDS de la zona (todas, sin importar la distancia al pin),
-    // que es justo lo que esta tabla muestra.
-    head.querySelector(".bt-badges").appendChild(
-      botonDescargaExcel(() => udsDeZona(TERRITORIO), () => tipoTxt + " " + z.n, "btn-excel bt-excel"));
-  }
+  // La descarga a Excel vive en un unico lugar: a la derecha del titulo
+  // "Resultados" (ver buscarYPintar). Este bloque llego a tener su propio
+  // boton y se quito a proposito -- dos botones identicos a media pantalla
+  // de distancia obligaban a leer cual exportaba que, y la cabecera de
+  // zona quedaba recargada.
   if (!lista.length) {
     caja.appendChild(el("p", "nota", "No hay ninguna UDS georreferenciada dentro de " +
       (esCorr ? "este corregimiento" : "esta vereda") +
