@@ -418,8 +418,36 @@ table.tabla tbody tr.fila-resaltada{background:var(--mde-amarillo) !important}
 .bloque-territorio .bt-nombre{flex:1 1 200px;font-size:16px;font-weight:900;color:#5C4400;
   font-family:var(--display);letter-spacing:-.2px}
 .bloque-territorio .bt-badges{display:flex;gap:8px;flex-wrap:wrap}
-.bloque-territorio .bt-badges span{font-size:11.5px;font-weight:800;color:#5C4400;
+/* ">" a proposito, no un descendiente cualquiera: el boton de descarga vive
+   dentro de .bt-badges y lleva su propio <span> con el icono. Con el selector
+   descendiente, ese icono heredaba la pildora amarilla de las insignias y
+   aparecia como una etiqueta suelta dentro del boton verde. */
+.bloque-territorio .bt-badges > span{font-size:11.5px;font-weight:800;color:#5C4400;
   background:var(--mde-amarillo);padding:4px 12px;border-radius:999px}
+
+/* --------- descarga de la hoja CUENTAME ---------
+   Verde solido (no amarillo): es una ACCION, no una etiqueta de dato, y en el
+   bloque de zona convive con las insignias amarillas de conteo -- si tomara
+   la paleta amarilla se leeria como una insignia mas y no como algo que se
+   puede pulsar. */
+.btn-excel{display:inline-flex;align-items:center;gap:7px;cursor:pointer;
+  background:var(--icbf-verde);color:#fff;border:none;border-radius:999px;
+  padding:7px 16px;font-size:12px;font-weight:800;font-family:var(--display);
+  letter-spacing:-.1px;white-space:nowrap;
+  box-shadow:0 4px 12px rgba(95,168,41,.3);
+  transition:transform .15s,box-shadow .15s,background .15s}
+.btn-excel:hover{background:var(--icbf-verde-osc);transform:translateY(-2px);
+  box-shadow:0 8px 18px rgba(95,168,41,.4)}
+.btn-excel:active{transform:translateY(0)}
+.btn-excel span{font-size:14px;line-height:1}
+/* dentro del bloque de zona el boton va en la misma fila que las insignias */
+.bloque-territorio .bt-badges .btn-excel{margin-left:4px}
+/* cabecera de "Resultados": titulo a la izquierda, boton a la derecha, y en
+   pantallas angostas el boton cae debajo en vez de apretar el titulo. */
+.cabecera-resultados{display:flex;align-items:flex-start;justify-content:space-between;
+  gap:14px;flex-wrap:wrap;margin-bottom:11px}
+.cabecera-resultados h2{margin-bottom:0}
+.cabecera-resultados #descargaResultados:empty{display:none}
 .bloque-territorio .bt-cuerpo{padding:4px 4px 6px;overflow-x:auto}
 .bloque-territorio .nota{margin:12px 16px}
 /* fila de una UDS que ademas cae dentro de la zona elegida, dentro de las
@@ -561,7 +589,10 @@ footer.build .autoria{display:inline-block;margin-top:12px;font-size:10.5px;font
   </div>
 
   <div class="card">
-    <h2>Resultados<small id="subResultados"></small></h2>
+    <div class="cabecera-resultados">
+      <h2>Resultados<small id="subResultados"></small></h2>
+      <div id="descargaResultados"></div>
+    </div>
     <div id="resultados"></div>
   </div>
 
@@ -577,3 +608,4 @@ footer.build .autoria{display:inline-block;margin-top:12px;font-size:10.5px;font
 <script>
 const D = __DATOS__;
 const V = __VEREDAS__;
+const X = __CUENTAME__;

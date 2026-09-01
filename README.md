@@ -10,28 +10,72 @@ Radio de búsqueda adaptativo, filtros de municipio / corregimiento / vereda, b�
 - `codigo/` — pipeline de generación:
   - `generar_datos_cercania.py` — procesa la base de cobertura y arma `recursos/datos_cercania.json`.
   - `generar_datos_veredas.py` — cruza esas UDS con el mapa veredal y arma `recursos/datos_veredas.json`.
-  - `generar_sitio.py` — arma el HTML final a partir de `codigo/plantilla/` + los dos JSON.
+  - `generar_datos_cuentame.py` — extrae la hoja CUENTAME completa para la descarga a Excel (**ver la advertencia sobre datos personales**).
+  - `generar_sitio.py` — arma el HTML final a partir de `codigo/plantilla/` + los tres JSON.
+  - `verificar.py` — pruebas de humo sobre los datos publicados.
+  - `verificar_xlsx.py` — comprueba que el Excel que genera el sitio se abra de verdad (requiere Node).
   - `plantilla/` — plantilla HTML/CSS (`tpl_head.html`) y lógica JS (`tpl_tail.js`).
   - `favicon_b64.txt` — ícono de la pestaña (y del pin del mapa), en base64.
 - `recursos/datos_cercania.json` — UDS, municipios y coordenadas ya procesados.
 - `recursos/datos_veredas.json` — contornos de veredas/corregimientos y a qué vereda pertenece cada UDS.
+- `recursos/datos_cuentame.json` — la hoja CUENTAME completa, para la descarga a Excel.
 
 ## Cómo reconstruir el sitio
 
 ```
 python codigo/generar_datos_cercania.py    # solo si cambió el Excel fuente
 python codigo/generar_datos_veredas.py     # solo si cambió lo anterior o el mapa veredal
+python codigo/generar_datos_cuentame.py    # solo si cambió el Excel fuente
 python codigo/generar_sitio.py
+python codigo/verificar.py                 # comprueba los datos publicados
+python codigo/verificar_xlsx.py            # comprueba la descarga a Excel (requiere Node)
 ```
 
-El orden importa: los dos JSON se cruzan por Código UDS, así que si se regenera
-`datos_cercania.json` hay que volver a correr `generar_datos_veredas.py` antes de
-armar el sitio. `generar_sitio.py` verifica esa correspondencia y se detiene con un
-mensaje si están desfasados.
+El orden importa: los tres JSON se cruzan por Código UDS, así que si se regenera
+`datos_cercania.json` hay que volver a correr los otros dos antes de armar el sitio.
+`generar_sitio.py` verifica esa correspondencia y se detiene con un mensaje si están
+desfasados.
 
 `generar_datos_veredas.py` requiere **shapely** (`pip install shapely`), solo en
 tiempo de construcción — el sitio final no depende de nada externo salvo Leaflet,
 los tiles de OpenStreetMap y Nominatim.
+
+## Descarga a Excel
+
+Cada tabla de resultados tiene un botón **Descargar Excel** que entrega un `.xlsx`
+con la hoja `CUENTAME` original —sus 56 columnas, tal cual— acotada a las UDS que
+esa tabla muestra:
+
+- En el bloque de zona: todas las UDS de la vereda o corregimiento elegido, sin
+  importar a qué distancia quedaron del pin.
+- En *Resultados*: todas las UDS del radio de búsqueda, las tres bandas juntas.
+
+El archivo se arma en el navegador, sin librerías externas (un `.xlsx` es un ZIP con
+unos XML dentro). `codigo/verificar_xlsx.py` comprueba de punta a punta que lo que
+produce el sitio se abra en un lector de Excel real y que el contenido sea exacto.
+
+## ⚠ Datos personales — leer antes de publicar
+
+`recursos/datos_cuentame.json` incluye las 56 columnas de CUENTAME, y cinco de ellas
+son datos personales del responsable de cada UDS:
+
+`Identificación Responsable UDS`, `Primer Nombre`, `Segundo Nombre`,
+`Primer Apellido`, `Segundo Apellido`.
+
+Esos datos quedan **embebidos en el HTML**, no solo en el archivo que se descarga:
+cualquiera que abra la página puede leerlos. Cruzados con `Dirección UDS`, las
+coordenadas y `Hogar Funciona En Su Vivienda`, identifican a ~4.300 personas —en
+buena parte madres comunitarias— junto con la ubicación de su vivienda.
+
+**Por eso este HTML no debe quedar en una URL de acceso abierto.** Antes de
+desplegarlo hay que ponerle control de acceso (en Vercel: *Deployment Protection* →
+*Password Protection* o *Vercel Authentication*, en la configuración del proyecto).
+
+Para generar una versión **sin** datos personales —apta para publicación abierta—
+poner `INCLUIR_DATOS_PERSONALES = False` en `codigo/generar_datos_cuentame.py` y
+volver a correr ese script y `generar_sitio.py`. El sitio queda idéntico salvo que
+el Excel descargado trae 51 columnas en vez de 56. `generar_sitio.py` avisa en cada
+corrida si la versión que está armando lleva datos personales.
 
 ## Si el script se detiene diciendo que la hoja no pasó las comprobaciones
 

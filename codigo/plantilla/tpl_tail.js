@@ -15,6 +15,201 @@ function fmtDist(m) {
   return m >= 1000 ? (m / 1000).toLocaleString("es-CO", { maximumFractionDigits: 1 }) + " km" : mil(m) + " m";
 }
 
+/* ---------------- descarga de la hoja CUENTAME ----------------
+   Genera un .xlsx de verdad (no un CSV renombrado) sin ninguna libreria
+   externa: un xlsx es un ZIP con unos pocos XML dentro, y aqui se arma a
+   mano. Se evita a proposito depender de un CDN mas -- el sitio ya carga
+   Leaflet de unpkg y sumar otra dependencia de red significa un motivo mas
+   por el que la descarga podria no funcionar en un equipo con el
+   antivirus/proxy de la entidad de por medio.
+
+   Se escribe con metodo "stored" (sin comprimir): evita tener que
+   implementar DEFLATE, y a cambio el archivo pesa mas -- irrelevante para
+   las decenas o cientos de filas que exporta una consulta. */
+
+// CRC-32, requerido por el formato ZIP para cada entrada.
+const CRC_TABLA = (() => {
+  const t = new Uint32Array(256);
+  for (let n = 0; n < 256; n++) {
+    let c = n;
+    for (let k = 0; k < 8; k++) c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
+    t[n] = c >>> 0;
+  }
+  return t;
+})();
+function crc32(bytes) {
+  let c = 0xFFFFFFFF;
+  for (let i = 0; i < bytes.length; i++) c = CRC_TABLA[(c ^ bytes[i]) & 0xFF] ^ (c >>> 8);
+  return (c ^ 0xFFFFFFFF) >>> 0;
+}
+
+// ZIP minimo, entradas sin comprimir. Devuelve un Blob listo para descargar.
+function armarZip(archivos) {
+  const cod = new TextEncoder();
+  const locales = [], central = [];
+  let offset = 0;
+  archivos.forEach(({ nombre, texto }) => {
+    const datos = cod.encode(texto);
+    const nom = cod.encode(nombre);
+    const crc = crc32(datos);
+    const cab = new DataView(new ArrayBuffer(30));
+    cab.setUint32(0, 0x04034b50, true);   // firma local
+    cab.setUint16(4, 20, true);           // version necesaria
+    cab.setUint16(8, 0, true);            // metodo 0 = stored
+    cab.setUint32(14, crc, true);
+    cab.setUint32(18, datos.length, true);
+    cab.setUint32(22, datos.length, true);
+    cab.setUint16(26, nom.length, true);
+    locales.push(new Uint8Array(cab.buffer), nom, datos);
+
+    const cen = new DataView(new ArrayBuffer(46));
+    cen.setUint32(0, 0x02014b50, true);   // firma central
+    cen.setUint16(4, 20, true);
+    cen.setUint16(6, 20, true);
+    cen.setUint16(10, 0, true);
+    cen.setUint32(16, crc, true);
+    cen.setUint32(20, datos.length, true);
+    cen.setUint32(24, datos.length, true);
+    cen.setUint16(28, nom.length, true);
+    cen.setUint32(42, offset, true);      // donde empieza su cabecera local
+    central.push(new Uint8Array(cen.buffer), nom);
+    offset += 30 + nom.length + datos.length;
+  });
+  const tamCentral = central.reduce((s, a) => s + a.length, 0);
+  const fin = new DataView(new ArrayBuffer(22));
+  fin.setUint32(0, 0x06054b50, true);     // fin del directorio central
+  fin.setUint16(8, archivos.length, true);
+  fin.setUint16(10, archivos.length, true);
+  fin.setUint32(12, tamCentral, true);
+  fin.setUint32(16, offset, true);
+  return new Blob([...locales, ...central, new Uint8Array(fin.buffer)],
+    { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+}
+
+function escXml(s) {
+  return String(s == null ? "" : s).replace(/[&<>"']/g, c => (
+    { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&apos;" }[c]
+  // los caracteres de control no son validos en XML 1.0 y Excel rechaza el
+  // archivo entero si aparece uno; se limpian en vez de arriesgar eso.
+  )).replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, "");
+}
+// A, B, ... Z, AA, AB... para la referencia de cada celda.
+function letraCol(n) {
+  let s = "";
+  for (n += 1; n > 0; n = Math.floor((n - 1) / 26)) s = String.fromCharCode(65 + (n - 1) % 26) + s;
+  return s;
+}
+// filas = [[valor, ...], ...]; la primera es el encabezado.
+function hojaXml(filas) {
+  const cuerpo = filas.map((fila, i) => {
+    const celdas = fila.map((v, j) => {
+      const ref = letraCol(j) + (i + 1);
+      if (typeof v === "number" && isFinite(v)) return '<c r="' + ref + '"><v>' + v + "</v></c>";
+      const t = escXml(v);
+      if (t === "") return "";
+      // inlineStr evita tener que mantener un sharedStrings.xml aparte.
+      return '<c r="' + ref + '" t="inlineStr"><is><t xml:space="preserve">' + t + "</t></is></c>";
+    }).join("");
+    return '<row r="' + (i + 1) + '">' + celdas + "</row>";
+  }).join("");
+  return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+    '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">' +
+    "<sheetData>" + cuerpo + "</sheetData></worksheet>";
+}
+
+function descargarXlsx(filas, nombreArchivo, nombreHoja) {
+  nombreHoja = (nombreHoja || "CUENTAME").replace(/[\\\/\?\*\[\]:]/g, " ").slice(0, 31);
+  const zip = armarZip([
+    {
+      nombre: "[Content_Types].xml",
+      texto: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+        '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">' +
+        '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>' +
+        '<Default Extension="xml" ContentType="application/xml"/>' +
+        '<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>' +
+        '<Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>' +
+        "</Types>",
+    },
+    {
+      nombre: "_rels/.rels",
+      texto: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+        '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
+        '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>' +
+        "</Relationships>",
+    },
+    {
+      nombre: "xl/workbook.xml",
+      texto: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+        '<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" ' +
+        'xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">' +
+        '<sheets><sheet name="' + escXml(nombreHoja) + '" sheetId="1" r:id="rId1"/></sheets></workbook>',
+    },
+    {
+      nombre: "xl/_rels/workbook.xml.rels",
+      texto: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+        '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
+        '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>' +
+        "</Relationships>",
+    },
+    { nombre: "xl/worksheets/sheet1.xml", texto: hojaXml(filas) },
+  ]);
+  const url = URL.createObjectURL(zip);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = nombreArchivo;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+// X.filas[codigo] guarda cada valor como numero (tal cual) o como indice
+// negativo a X.textos (-1 -> textos[0]), ver generar_datos_cuentame.py.
+function filaCuentame(id) {
+  const cruda = X.filas[id];
+  if (!cruda) return null;
+  return cruda.map(v => (typeof v === "number" && v < 0) ? X.textos[-v - 1] : v);
+}
+// puntos = lista de UDS (objetos de D.puntos) tal como se ven en una tabla.
+// Devuelve las mismas filas y columnas del reporte CUENTAME original.
+function filasCuentameDe(puntos) {
+  const filas = [X.cols.slice()];
+  puntos.forEach(p => {
+    const f = filaCuentame(p.id);
+    if (f) filas.push(f);
+  });
+  return filas;
+}
+function nombreArchivoExport(etiqueta) {
+  const hoy = new Date();
+  const dd = String(hoy.getDate()).padStart(2, "0");
+  const mm = String(hoy.getMonth() + 1).padStart(2, "0");
+  const limpia = String(etiqueta || "consulta")
+    .normalize("NFD").replace(/[̀-ͯ]/g, "")
+    .replace(/[^A-Za-z0-9]+/g, " ").trim().replace(/\s+/g, " ").slice(0, 60);
+  return "CUENTAME - " + limpia + " - " + dd + mm + hoy.getFullYear() + ".xlsx";
+}
+// boton reutilizable: se le pasa como obtener las UDS en el momento del clic
+// (no la lista ya resuelta) para que exporte siempre lo que la tabla muestra
+// ahora, no lo que mostraba cuando se pinto el boton.
+function botonDescargaExcel(obtenerPuntos, etiqueta, clase) {
+  const b = el("button", clase || "btn-excel",
+    '<span aria-hidden="true">⤓</span> Descargar Excel');
+  b.type = "button";
+  b.onclick = () => {
+    const puntos = obtenerPuntos() || [];
+    if (!puntos.length) return;
+    const filas = filasCuentameDe(puntos);
+    if (filas.length < 2) {
+      b.textContent = "Sin datos para exportar";
+      setTimeout(() => { b.innerHTML = '<span aria-hidden="true">⤓</span> Descargar Excel'; }, 2500);
+      return;
+    }
+    descargarXlsx(filas, nombreArchivoExport(etiqueta()), "CUENTAME");
+  };
+  return b;
+}
+
 /* ---------------- disponibilidad de cupos ---------------- */
 // color de cada UDS en el mapa/tabla: por disponibilidad de cupos (verde/
 // rojo), no por banda de distancia -- a pedido del usuario, para que de
@@ -932,6 +1127,12 @@ function pintarBloqueTerritorio(cont) {
     "<span>" + mil(disp) + " disponibles</span>" +
     "</span>";
   caja.appendChild(head);
+  if (lista.length) {
+    // exporta las UDS de la zona (todas, sin importar la distancia al pin),
+    // que es justo lo que esta tabla muestra.
+    head.querySelector(".bt-badges").appendChild(
+      botonDescargaExcel(() => udsDeZona(TERRITORIO), () => tipoTxt + " " + z.n, "btn-excel bt-excel"));
+  }
   if (!lista.length) {
     caja.appendChild(el("p", "nota", "No hay ninguna UDS georreferenciada dentro de " +
       (esCorr ? "este corregimiento" : "esta vereda") +
@@ -971,6 +1172,8 @@ function buscarYPintar(mantenerVista) {
     $("#infoUds").classList.remove("compacto", "muy-compacto", "super-compacto");
     $("#infoUds").innerHTML = INFO_UDS_VACIO;
   }
+  const dlWrap = $("#descargaResultados");
+  if (dlWrap) dlWrap.innerHTML = "";
   if (!PUNTO) {
     resWrap.innerHTML = '<p class="nota">Elige un municipio y marca un punto para ver las unidades de servicio más cercanas.</p>';
     sub.textContent = "";
@@ -1007,6 +1210,14 @@ function buscarYPintar(mantenerVista) {
   sub.textContent = items.length
     ? items.length + (items.length === 1 ? " unidad de servicio" : " unidades de servicio") + " en un radio de " + fmtDist(radioFinal)
     : "";
+  // exporta TODAS las UDS del radio de esta busqueda (las tres bandas
+  // juntas), que es lo que esta seccion muestra. El bloque de zona, mas
+  // arriba, tiene su propio boton con su propio alcance.
+  if (dlWrap && items.length) {
+    dlWrap.appendChild(botonDescargaExcel(
+      () => items.map(x => x.p),
+      () => (MUNI ? MUNI.nombre + " " : "") + "radio " + fmtDist(radioFinal)));
+  }
 
   resWrap.innerHTML = "";
   // el bloque de la zona va PRIMERO y es independiente del radio: responde
