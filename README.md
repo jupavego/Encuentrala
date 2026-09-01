@@ -59,13 +59,25 @@ produce el sitio se abra en un lector de Excel real y que el contenido sea exact
 `recursos/datos_cuentame.json` incluye las 56 columnas de CUENTAME, y cinco de ellas
 son datos personales del responsable de cada UDS:
 
-`Identificación Responsable UDS`, `Primer Nombre`, `Segundo Nombre`,
-`Primer Apellido`, `Segundo Apellido`.
+| Columna | Cómo viaja |
+|---|---|
+| `Identificación Responsable UDS` | **enmascarada**: `****5546` (solo los últimos 4 dígitos) |
+| `Primer Nombre`, `Segundo Nombre`, `Primer Apellido`, `Segundo Apellido` | completos |
 
-Esos datos quedan **embebidos en el HTML**, no solo en el archivo que se descarga:
-cualquiera que abra la página puede leerlos. Cruzados con `Dirección UDS`, las
-coordenadas y `Hogar Funciona En Su Vivienda`, identifican a ~4.300 personas —en
-buena parte madres comunitarias— junto con la ubicación de su vivienda.
+El número de documento **nunca sale completo**: se enmascara siempre, incluso con
+`INCLUIR_DATOS_PERSONALES = True`. Es irreversible — los dígitos ocultos no están en
+ninguna parte del archivo publicado — y deja lo suficiente para cotejar contra un
+documento que ya se tenga a la mano.
+
+> **Por qué enmascarar y no cifrar.** El sitio es una página estática. Cualquier
+> llave capaz de descifrar el dato tendría que viajar dentro de la misma página, al
+> alcance de quien la abra: un cifrado así no protegería nada, solo lo aparentaría.
+
+Los nombres sí viajan completos, y quedan **embebidos en el HTML**, no solo en el
+archivo que se descarga: cualquiera que abra la página puede leerlos. Cruzados con
+`Dirección UDS`, las coordenadas y `Hogar Funciona En Su Vivienda`, identifican a
+~4.300 personas —en buena parte madres comunitarias— junto con la ubicación de su
+vivienda.
 
 **Por eso este HTML no debe quedar en una URL de acceso abierto.** Antes de
 desplegarlo hay que ponerle control de acceso (en Vercel: *Deployment Protection* →

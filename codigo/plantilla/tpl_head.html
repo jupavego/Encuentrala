@@ -162,29 +162,54 @@ details.card[open] summary h2::before{content:"–  "}
    tiene el foco -- ver onblur en el JS -- asi que :focus-within alcanza para
    levantar el grupo activo sin necesidad de manejar z-index a mano. */
 .grupo-sel:focus-within{z-index:50}
-.grupo-sel + .grupo-sel{margin-top:12px}
-.grupo-sel label{font-size:11px;font-weight:700;color:var(--ink2);text-transform:uppercase;letter-spacing:.8px}
-.grupo-sel label .op{font-weight:600;color:var(--ink3);text-transform:none;letter-spacing:0;font-size:10.5px}
+/* Aire entre los tres filtros. Antes eran 12px y, con anillos de 2.5px
+   alrededor de cada campo, los tres se leian como un bloque apretado. */
+.grupo-sel + .grupo-sel{margin-top:18px}
+.grupo-sel label{display:flex;align-items:center;font-size:10.5px;font-weight:700;
+  color:var(--ink3);text-transform:uppercase;letter-spacing:.7px}
+/* El color de cada nivel (verde = municipio, amarillo = zona, igual que sus
+   poligonos en el mapa) pasa a un punto de 7px en la etiqueta, en vez de
+   tenir la pildora entera. Se conserva la correspondencia control<->mapa,
+   pero deja de haber tres bloques de color grandes compitiendo dentro de una
+   tarjeta de 380px de ancho. */
+.grupo-sel label::before{content:"";flex:0 0 auto;width:7px;height:7px;border-radius:50%;
+  margin-right:8px;background:var(--icbf-verde)}
+.grupo-sel.territorio label::before{background:var(--mde-amarillo-osc)}
+.grupo-sel label .op{font-weight:600;color:var(--ink3);text-transform:none;letter-spacing:0;
+  font-size:10px;opacity:.8;margin-left:5px}
+/* Borde de 1.5px (antes 2.5) y en reposo del tono mas claro disponible: el
+   campo se define por su relleno, no por su contorno. El acento aparece
+   cuando el campo importa -- al pasar el mouse, al enfocarlo, o cuando ya
+   tiene un valor elegido. */
 .grupo-sel input{
-  width:100%;background:var(--sunk);border:2.5px solid var(--rule2);border-radius:var(--radio-pill);
-  padding:12px 44px 12px 20px;font-size:14.5px;color:var(--ink);font-weight:700;font-family:var(--display);
-  transition:border-color .15s,transform .1s;
+  width:100%;background:var(--sunk);border:1.5px solid var(--rule);border-radius:var(--radio-pill);
+  padding:12px 42px 12px 18px;font-size:14.5px;color:var(--ink);font-weight:700;font-family:var(--display);
+  transition:border-color .15s,background .15s,box-shadow .15s;
 }
-.grupo-sel input:hover:not(:disabled){border-color:var(--icbf-verde)}
-.grupo-sel input:focus{border-color:var(--icbf-verde);outline:none}
-.grupo-sel input:disabled{opacity:.55;cursor:not-allowed}
+.grupo-sel input:hover:not(:disabled){border-color:var(--rule2)}
+/* anillo de foco suave en vez de un borde mas grueso: marca el campo activo
+   sin cambiar su geometria (un borde que engorda al enfocar desplaza el
+   texto un pixel y se siente inestable). */
+.grupo-sel input:focus{border-color:var(--icbf-verde);outline:none;
+  box-shadow:0 0 0 3px rgba(95,168,41,.14)}
+.grupo-sel input:not(:placeholder-shown){border-color:var(--rule2);background:var(--icbf-verde-suave)}
+.grupo-sel input:disabled{opacity:.6;cursor:not-allowed;background:#F7F9F4;
+  color:var(--ink3);font-weight:600}
 /* los dos filtros de abajo (corregimiento/vereda) son de la familia amarilla
    -- la misma que sus poligonos en el mapa (ver COLOR_TERRITORIO en el JS),
    para que se lea de una que ese control y esa zona pintada son lo mismo. */
-.grupo-sel.territorio input:hover:not(:disabled),
-.grupo-sel.territorio input:focus{border-color:var(--mde-amarillo-osc)}
-.grupo-sel.territorio input:not(:placeholder-shown){border-color:var(--mde-amarillo-osc);background:#FFFBEA}
+.grupo-sel.territorio input:focus{border-color:var(--mde-amarillo-osc);
+  box-shadow:0 0 0 3px rgba(201,154,0,.16)}
+.grupo-sel.territorio input:not(:placeholder-shown){border-color:var(--mde-amarillo);background:#FFFCF0}
 /* flechita de "desplegable" -- puramente visual, el input sigue siendo de
    texto libre; solo avisa que hacer clic sin escribir muestra la lista
-   completa, no solo resultados filtrados. */
-.grupo-sel::after{content:"";position:absolute;right:20px;top:41px;width:9px;height:9px;
-  border-right:2.5px solid var(--ink3);border-bottom:2.5px solid var(--ink3);
-  transform:rotate(45deg);pointer-events:none}
+   completa, no solo resultados filtrados.
+   Anclada por "bottom" y no por "top": asi queda centrada en el campo
+   aunque la etiqueta de arriba cambie de tamano o pase a dos lineas. */
+.grupo-sel::after{content:"";position:absolute;right:19px;bottom:21px;width:8px;height:8px;
+  border-right:2px solid var(--ink3);border-bottom:2px solid var(--ink3);
+  transform:rotate(45deg);pointer-events:none;opacity:.65;transition:opacity .15s}
+.grupo-sel:focus-within::after{opacity:1;border-color:var(--icbf-verde-osc)}
 /* left/right en -22px (mismo valor que el padding horizontal de .card) para
    que el desplegable llegue hasta el borde de la tarjeta, no solo el ancho
    del input -- si se queda mas angosto que la tarjeta, el borde verde
@@ -205,11 +230,17 @@ details.card[open] summary h2::before{content:"–  "}
    igual que el de municipio, siempre reflejan donde esta el pin -- solo
    despeja el mapa cuando el municipio tiene muchas veredas (Turbo tiene 235)
    y el rayado estorba para ver las UDS. */
-#btnVeredasMuni{display:none;margin-top:14px;width:100%;
-  background:#FFFBEA;color:#5C4400;border:2px solid var(--mde-amarillo);
-  border-radius:var(--radio-pill);padding:9px 18px;font-size:12.5px;font-weight:800;
-  font-family:var(--display);transition:background .15s,border-color .15s}
-#btnVeredasMuni:hover{background:var(--mde-amarillo);border-color:var(--mde-amarillo-osc)}
+/* Accion secundaria, no un tercer bloque de color: es un interruptor de una
+   capa del mapa, no un filtro. Antes era una caja amarilla llena del mismo
+   peso visual que los campos de arriba y peleaba con ellos por la atencion.
+   Ahora va como texto con un separador tenue encima -- presente, pero
+   claramente por debajo de los tres filtros en la jerarquia. */
+#btnVeredasMuni{display:none;margin:16px 0 0;width:100%;
+  background:none;color:var(--ink2);border:none;border-top:1px solid var(--rule);
+  border-radius:0;padding:14px 4px 0;font-size:12px;font-weight:700;
+  font-family:var(--display);text-align:left;transition:color .15s}
+#btnVeredasMuni::before{content:"◍";margin-right:8px;color:var(--mde-amarillo-osc);font-size:13px}
+#btnVeredasMuni:hover{color:var(--icbf-verde-osc)}
 #btnVeredasMuni.visible{display:block}
 
 .buscar-dir{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px}
@@ -306,6 +337,14 @@ details.card[open] summary h2::before{content:"–  "}
   border-radius:var(--radio-sm);padding:7px 14px;margin-bottom:14px;
   display:flex;flex-direction:column;justify-content:center;overflow:hidden}
 .info-uds-vacio{margin:0;font-size:12.5px;color:var(--ink3);font-weight:600;line-height:1.5}
+/* el mismo panel, cuando lo que se esta mirando es una zona (vereda o
+   corregimiento) y no una UDS. Se tine de amarillo -- la familia territorial,
+   la misma de los dos filtros y de los poligonos -- para que se distinga de
+   un vistazo de que se esta leyendo, sin necesidad de leer la etiqueta. */
+.info-uds.zona{background:#FFFCF0;border-color:var(--mde-amarillo)}
+.info-uds.zona .info-uds-nombre{color:#5C4400}
+.info-uds.zona .info-uds-nombre span{background:var(--mde-amarillo);color:#5C4400;
+  padding:2px 8px;border-radius:999px;margin-right:8px}
 /* la etiqueta ("UDS", "Código", etc.) va EN LINEA con su valor, no encima
    -- antes cada campo eran 2 lineas (etiqueta arriba, valor abajo);
    ponerlas en la misma linea corta el alto del bloque de datos casi a la
@@ -584,7 +623,7 @@ footer.build .autoria{display:inline-block;margin-top:12px;font-size:10.5px;font
     <div class="panel-mapa">
       <div class="card">
         <div class="info-uds" id="infoUds">
-          <p class="info-uds-vacio">Pasa el cursor sobre un punto del mapa para ver aquí su información — nombre, código, entidad, contrato, dirección, teléfono, servicio y cupos disponibles.</p>
+          <p class="info-uds-vacio">Pasa el cursor por el mapa para ver aquí la vereda sobre la que estás y su cobertura en cupos; ponlo sobre un punto para ver esa UDS en detalle — nombre, código, entidad, contrato, dirección, teléfono, servicio y cupos.</p>
         </div>
         <div class="mapa-wrap">
           <div id="mapaCerc"></div>

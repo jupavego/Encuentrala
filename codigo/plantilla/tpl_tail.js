@@ -224,7 +224,7 @@ function chipCupos(p) {
     : '<span class="chip-cupos sin">Sin cupos</span>';
 }
 
-const INFO_UDS_VACIO = '<p class="info-uds-vacio">Pasa el cursor sobre un punto del mapa para ver aquí su información — nombre, código, entidad, contrato, dirección, teléfono, servicio y cupos disponibles.</p>';
+const INFO_UDS_VACIO = '<p class="info-uds-vacio">Pasa el cursor por el mapa para ver aquí la vereda sobre la que estás y su cobertura en cupos; ponlo sobre un punto para ver esa UDS en detalle — nombre, código, entidad, contrato, dirección, teléfono, servicio y cupos.</p>';
 // contenido del panel #infoUds (ver mas abajo, junto al mapa) al pasar el
 // mouse sobre una UDS -- reemplaza al tooltip flotante de Leaflet: al
 // tener ancho y posicion fijos (siempre el mismo panel, mismo ancho del
@@ -253,8 +253,12 @@ function contenidoInfoUds(p) {
 // ver CSS) hasta que quepa sin scroll.
 function mostrarInfoUds(p) {
   const panel = $("#infoUds");
-  panel.classList.remove("compacto", "muy-compacto", "super-compacto");
+  panel.classList.remove("compacto", "muy-compacto", "super-compacto", "zona");
   panel.innerHTML = contenidoInfoUds(p);
+  ajustarInfo(panel);
+}
+// achica la letra en escalones hasta que el contenido quepa en la altura fija
+function ajustarInfo(panel) {
   if (panel.scrollHeight > panel.clientHeight) {
     panel.classList.add("compacto");
     if (panel.scrollHeight > panel.clientHeight) {
@@ -262,6 +266,12 @@ function mostrarInfoUds(p) {
       if (panel.scrollHeight > panel.clientHeight) panel.classList.add("super-compacto");
     }
   }
+}
+function limpiarInfo() {
+  const panel = $("#infoUds");
+  if (!panel) return;
+  panel.classList.remove("compacto", "muy-compacto", "super-compacto", "zona");
+  panel.innerHTML = INFO_UDS_VACIO;
 }
 
 /* ---------------- tabla generica ordenable ---------------- */
@@ -504,6 +514,86 @@ let LIENZO = null;          // renderer canvas (ver initMapaBase)
 function idxMuniActual() {
   if (!MUNI) return -1;
   return D.municipios.indexOf(MUNI);
+}
+
+/* ---------------- hover: que vereda hay bajo el cursor ----------------
+   El contorno de contexto se dibuja como UN solo poligono con todos los
+   anillos del municipio (ver dibujarVeredasContexto): eso es lo que permite
+   que Turbo, con 235 veredas, no arrastre el mapa. La contrapartida es que
+   esa capa no puede decir por si sola sobre cual vereda esta el cursor.
+   En vez de volver a partirla en 235 capas interactivas, se resuelve por
+   calculo: en cada mousemove se busca la vereda que contiene el punto,
+   reusando el mismo puntoEnGeom() del resto del sitio. Con el bbox como
+   descarte previo, lo normal es evaluar uno o dos poligonos de verdad. */
+const BBOX_ZONA = new Map();
+function bboxVereda(i) {
+  let b = BBOX_ZONA.get(i);
+  if (!b) {
+    let minLat = 90, maxLat = -90, minLon = 180, maxLon = -180;
+    anillosVereda(i).forEach(poly => poly.forEach(anillo => anillo.forEach(pt => {
+      if (pt[0] < minLat) minLat = pt[0];
+      if (pt[0] > maxLat) maxLat = pt[0];
+      if (pt[1] < minLon) minLon = pt[1];
+      if (pt[1] > maxLon) maxLon = pt[1];
+    })));
+    b = [minLat, minLon, maxLat, maxLon];
+    BBOX_ZONA.set(i, b);
+  }
+  return b;
+}
+function veredaEnPunto(lat, lon) {
+  const im = idxMuniActual();
+  if (im < 0) return -1;
+  for (const i of (VEREDAS_POR_MUNI[im] || [])) {
+    const b = bboxVereda(i);
+    if (lat < b[0] || lat > b[2] || lon < b[1] || lon > b[3]) continue;
+    if (puntoEnGeom(lat, lon, anillosVereda(i))) return i;
+  }
+  return -1;
+}
+
+// mientras el cursor esta sobre el punto de una UDS manda esa informacion,
+// mas especifica que la de la zona que la contiene.
+let HOVER_UDS = false;
+let ZONA_HOVER = -1;   // vereda que se esta mostrando ahora (-1 = ninguna)
+
+function contenidoInfoZona(i) {
+  const v = V.veredas[i];
+  const corr = v.cr != null ? V.corregimientos[v.cr] : null;
+  const lista = UDS_POR_VEREDA[i] || [];
+  const cupos = lista.reduce((s, p) => s + (p.cu || 0), 0);
+  const aten = lista.reduce((s, p) => s + (p.at || 0), 0);
+  const disp = cupos - aten;
+  const tipo = (v.t && v.t !== "VE" ? (TIPO_TERRITORIO[v.t] || "Vereda") : "Vereda");
+  return '<div class="info-uds-nombre"><span>' + esc(tipo) + "</span>" + esc(v.n) + "</div>" +
+    '<div class="info-uds-grid">' +
+    (corr ? "<div><span>Corregimiento</span>" + esc(corr.n) + "</div>" : "") +
+    "<div><span>Municipio</span>" + esc(V.municipios[v.m]) + "</div>" +
+    "<div><span>UDS</span>" + (lista.length ? mil(lista.length) : "ninguna") + "</div>" +
+    (lista.length
+      ? "<div><span>Cupos</span>" + mil(cupos) + "</div>" +
+        "<div><span>Atendidos</span>" + mil(aten) + "</div>" +
+        '<div><span>Disponibles</span><b style="color:' +
+          (disp > 0 ? COLOR_CON_CUPOS : COLOR_SIN_CUPOS) + '">' + mil(disp) + "</b></div>"
+      : '<div class="full">Sin unidades de servicio georreferenciadas en esta zona.</div>') +
+    "</div>";
+}
+function mostrarInfoZona(i) {
+  const panel = $("#infoUds");
+  if (!panel) return;
+  panel.classList.remove("compacto", "muy-compacto", "super-compacto");
+  panel.classList.add("zona");
+  panel.innerHTML = contenidoInfoZona(i);
+  ajustarInfo(panel);
+}
+// se llama desde el mousemove del mapa (ver initMapaBase)
+function actualizarHoverZona(lat, lon) {
+  if (HOVER_UDS) return;                 // la UDS manda
+  const i = veredaEnPunto(lat, lon);
+  if (i === ZONA_HOVER) return;          // nada cambio: no se repinta
+  ZONA_HOVER = i;
+  if (i < 0) limpiarInfo();
+  else mostrarInfoZona(i);
 }
 
 function dibujarVeredasContexto() {
@@ -908,6 +998,14 @@ function initMapaBase() {
     colocarPin(true);
     buscarYPintar();
   });
+  // hover de zona: nombre de la vereda bajo el cursor y su cobertura en
+  // cupos, en el mismo panel fijo que ya usa el hover de una UDS. No se
+  // limita a cuando hay filtro puesto -- basta con estar viendo un municipio,
+  // que es cuando estan cargadas sus veredas.
+  map.on("mousemove", (e) => actualizarHoverZona(e.latlng.lat, e.latlng.lng));
+  // salir del recuadro del mapa no dispara mousemove: sin esto el panel se
+  // queda con la ultima zona pintada.
+  map.on("mouseout", () => { ZONA_HOVER = -1; if (!HOVER_UDS) limpiarInfo(); });
   // pin por defecto ya puesto desde el arranque, en Medellin (capital del
   // departamento), draggable de una, para quien solo quiere arrastrarlo a
   // su punto sin elegir municipio ni escribir nada. mantenerVista=true: a
@@ -1168,10 +1266,13 @@ function buscarYPintar(mantenerVista) {
   RES_MARKERS.forEach(m => MAPA && MAPA.removeLayer(m));
   RES_MARKERS = [];
   MARCADOR_POR_ID = {};
-  if ($("#infoUds")) { // los marcadores viejos ya no existen, ningun hover en curso sigue siendo valido
-    $("#infoUds").classList.remove("compacto", "muy-compacto", "super-compacto");
-    $("#infoUds").innerHTML = INFO_UDS_VACIO;
-  }
+  // los marcadores viejos ya no existen: ningun hover en curso sigue siendo
+  // valido. Se usa limpiarInfo() y no un innerHTML suelto para que tambien
+  // se caiga la clase .zona -- si no, el panel se quedaba con el fondo
+  // amarillo de zona mostrando el texto de "pasa el cursor...".
+  HOVER_UDS = false;
+  ZONA_HOVER = -1;
+  limpiarInfo();
   const dlWrap = $("#descargaResultados");
   if (dlWrap) dlWrap.innerHTML = "";
   if (!PUNTO) {
@@ -1281,11 +1382,14 @@ function buscarYPintar(mantenerVista) {
       // mas arriba para el porque de usar un panel fijo en vez de un
       // tooltip flotante. Distinto del popup de abajo (con clic, mas
       // completo, se abre sobre el mapa mismo).
-      m.on("mouseover", () => mostrarInfoUds(p));
-      m.on("mouseout", () => {
-        const panel = $("#infoUds");
-        panel.classList.remove("compacto", "muy-compacto", "super-compacto");
-        panel.innerHTML = INFO_UDS_VACIO;
+      m.on("mouseover", () => { HOVER_UDS = true; mostrarInfoUds(p); });
+      m.on("mouseout", (e) => {
+        HOVER_UDS = false;
+        // al salir del punto el cursor sigue sobre el mapa: en vez de dejar
+        // el panel vacio, se vuelve a mostrar la zona que hay debajo.
+        ZONA_HOVER = -1;
+        const ll = e && e.latlng;
+        if (ll) actualizarHoverZona(ll.lat, ll.lng); else limpiarInfo();
       });
       m.bindPopup("<b>" + esc(p.n || "(sin nombre)") + "</b>" +
         (p.dir ? "<br>" + esc(p.dir) : "") +
@@ -1325,11 +1429,14 @@ function buscarYPintar(mantenerVista) {
       const m = L.circleMarker([p.y, p.x], {
         radius: 5, color: COLOR_ZONA, weight: 2, fillColor: colorCupos(p), fillOpacity: 0.85,
       }).addTo(MAPA);
-      m.on("mouseover", () => mostrarInfoUds(p));
-      m.on("mouseout", () => {
-        const panel = $("#infoUds");
-        panel.classList.remove("compacto", "muy-compacto", "super-compacto");
-        panel.innerHTML = INFO_UDS_VACIO;
+      m.on("mouseover", () => { HOVER_UDS = true; mostrarInfoUds(p); });
+      m.on("mouseout", (e) => {
+        HOVER_UDS = false;
+        // al salir del punto el cursor sigue sobre el mapa: en vez de dejar
+        // el panel vacio, se vuelve a mostrar la zona que hay debajo.
+        ZONA_HOVER = -1;
+        const ll = e && e.latlng;
+        if (ll) actualizarHoverZona(ll.lat, ll.lng); else limpiarInfo();
       });
       m.on("click", (e) => { L.DomEvent.stopPropagation(e); resaltarFila(p.id); });
       if (p.id != null) MARCADOR_POR_ID[p.id] = m;

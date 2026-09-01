@@ -48,6 +48,21 @@ COLUMNAS_PERSONALES = [
     "Segundo Apellido",
 ]
 
+# Columnas que SIEMPRE se enmascaran, incluso con INCLUIR_DATOS_PERSONALES.
+# El numero de documento es el dato que mas dano hace si se filtra (sirve para
+# suplantacion y para cruzar con otras bases), asi que no viaja completo al
+# navegador en ningun caso.
+#
+# Por que enmascarar y no cifrar: el sitio es una pagina estatica: cualquier
+# llave capaz de descifrar el dato tendria que viajar dentro de la misma
+# pagina, al alcance de quien la abra. Un cifrado asi no protege nada, solo
+# lo aparenta. Enmascarar es irreversible de verdad -- los digitos que se
+# quitan no estan en ninguna parte del archivo publicado -- y deja lo
+# suficiente (ultimos 4) para cotejar contra un documento que ya se tenga a
+# la mano, que es el uso real en supervision.
+COLUMNAS_ENMASCARADAS = ["Identificación Responsable UDS"]
+DIGITOS_VISIBLES = 4
+
 wb = openpyxl.load_workbook(FUENTE, read_only=True, data_only=True)
 ws = wb["CUENTAME"]
 filas = ws.iter_rows(min_row=1, values_only=True)
@@ -106,6 +121,23 @@ def cod(v):
     return -(i + 1)
 
 
+def enmascarar(v):
+    """21815546 -> ****5546. Irreversible: los digitos ocultos no quedan en
+    ninguna parte del archivo publicado."""
+    s = str(limpio(v)).strip()
+    if not s:
+        return ""
+    if len(s) <= DIGITOS_VISIBLES:
+        return "*" * len(s)
+    return "*" * (len(s) - DIGITOS_VISIBLES) + s[-DIGITOS_VISIBLES:]
+
+
+# posiciones (dentro de la fila ya recortada) que hay que enmascarar
+pos_enmascarar = {j for j, c in enumerate(cols) if c in COLUMNAS_ENMASCARADAS}
+if pos_enmascarar:
+    print("Columnas enmascaradas (solo los ultimos %d digitos): %s"
+          % (DIGITOS_VISIBLES, [cols[j] for j in sorted(pos_enmascarar)]))
+
 datos = {}
 n = 0
 for r in filas:
@@ -114,7 +146,10 @@ for r in filas:
     codigo = r[i_codigo]
     if codigo is None:
         continue
-    datos[str(codigo).strip()] = [cod(r[i]) for i in mantener]
+    fila = []
+    for j, i in enumerate(mantener):
+        fila.append(cod(enmascarar(r[i]) if j in pos_enmascarar else r[i]))
+    datos[str(codigo).strip()] = fila
     n += 1
 
 # cruce con las UDS que el sitio ya conoce: si una UDS del mapa no tuviera
