@@ -74,8 +74,9 @@ partes = set(z.namelist())
 esperadas = {
     "[Content_Types].xml", "_rels/.rels", "xl/workbook.xml",
     "xl/_rels/workbook.xml.rels", "xl/worksheets/sheet1.xml",
+    "xl/styles.xml",
 }
-check(esperadas <= partes, "estan las 5 partes que exige el formato",
+check(esperadas <= partes, "estan las %d partes que exige el formato" % len(esperadas),
       "faltan: %s" % (esperadas - partes))
 
 print("\n=== Un lector de Excel real lo abre ===")
@@ -92,6 +93,29 @@ check(len(leido) == len(esperado), "mismo numero de filas",
       "esperadas %d, leidas %d" % (len(esperado), len(leido)))
 check(ws.max_column == len(esperado[0]), "mismo numero de columnas",
       "esperadas %d, leidas %d" % (len(esperado[0]), ws.max_column))
+
+print("\n=== El encabezado tiene formato, no sale plano ===")
+# openpyxl lee los estilos igual que Excel: si styles.xml estuviera mal
+# formado, o el indice s= no apuntara al xf correcto, esto lo delata.
+c1 = ws.cell(row=1, column=1)
+check(c1.font is not None and c1.font.bold, "el encabezado va en negrilla")
+check(bool(c1.alignment and c1.alignment.wrap_text),
+      "el encabezado tiene el texto ajustado (wrapText)")
+relleno = c1.fill.fgColor.rgb if c1.fill and c1.fill.fgColor else None
+check(relleno not in (None, "00000000"), "el encabezado tiene relleno de color",
+      "fgColor=%r" % relleno)
+check(c1.border is not None and c1.border.bottom is not None
+      and c1.border.bottom.style is not None, "las celdas llevan borde")
+cuerpo = ws.cell(row=2, column=1)
+check(not (cuerpo.font and cuerpo.font.bold), "las filas de datos NO van en negrilla")
+check(ws.freeze_panes == "A2", "la fila de encabezado queda congelada",
+      "freeze_panes=%r" % ws.freeze_panes)
+check(ws.auto_filter.ref is not None, "hay filtros automaticos sobre el encabezado")
+anchos = [round(d.width) for d in ws.column_dimensions.values() if d.width]
+check(len(anchos) >= ws.max_column, "todas las columnas traen ancho propio",
+      "%d de %d" % (len(anchos), ws.max_column))
+if anchos:
+    print("       ancho de columna: min %d, max %d (topado en 42)" % (min(anchos), max(anchos)))
 
 print("\n=== El contenido coincide celda por celda ===")
 distintas = []

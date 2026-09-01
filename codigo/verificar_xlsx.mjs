@@ -39,7 +39,7 @@ const V = datos("V");
 
 const fn = new Function("X", "V",
   bloqueZona + "\n" + bloque +
-  "\nreturn { armarZip, hojaXml, filasCuentameDe, filaCuentame, letraCol, escXml };");
+  "\nreturn { armarZip, hojaXml, partesXlsx, filasCuentameDe, filaCuentame, letraCol, escXml, anchosDe };");
 const api = fn(X, V);
 
 // comprobaciones baratas de letraCol antes de nada
@@ -55,13 +55,12 @@ const ids = Object.keys(X.filas).slice(0, 40);
 const filas = api.filasCuentameDe(ids.map(id => ({ id })));
 console.log(`filas a exportar: ${filas.length} (1 encabezado + ${filas.length - 1} UDS), ${filas[0].length} columnas`);
 
-const blob = api.armarZip([
-  { nombre: "[Content_Types].xml", texto: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/></Types>' },
-  { nombre: "_rels/.rels", texto: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>' },
-  { nombre: "xl/workbook.xml", texto: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="CUENTAME" sheetId="1" r:id="rId1"/></sheets></workbook>' },
-  { nombre: "xl/_rels/workbook.xml.rels", texto: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/></Relationships>' },
-  { nombre: "xl/worksheets/sheet1.xml", texto: api.hojaXml(filas) },
-]);
+// se usa la MISMA funcion que arma el archivo en el navegador, en vez de
+// repetir aqui la lista de partes: asi la prueba no puede pasar sobre algo
+// distinto de lo que descarga el usuario.
+const partes = api.partesXlsx(filas, "CUENTAME");
+console.log(`partes del xlsx: ${partes.length} (${partes.map(p => p.nombre).join(", ")})`);
+const blob = api.armarZip(partes);
 
 const buf = Buffer.from(await blob.arrayBuffer());
 fs.writeFileSync(SALIDA, buf);
