@@ -1236,7 +1236,16 @@ function pintarLeyendaCupos() {
   // tabla se colorean por disponibilidad de cupos, no por que tan lejos
   // esta cada UDS (eso ya lo dice el titulo de cada grupo desplegable).
   const ley = $("#leyendaBandas");
-  ley.innerHTML =
+  // el interruptor de la capa de veredas vive DENTRO de esta fila (ver el
+  // marcado), asi que no se puede reescribir con innerHTML de un tirón: eso
+  // se lo llevaria por delante junto con su manejador de clic. Se pintan las
+  // etiquetas en un contenedor propio y el boton se deja intacto al final.
+  let etiquetas = ley.querySelector(".ley-items");
+  if (!etiquetas) {
+    etiquetas = el("div", "ley-items");
+    ley.insertBefore(etiquetas, ley.firstChild);
+  }
+  etiquetas.innerHTML =
     '<span><i class="pt" style="background:' + COLOR_CON_CUPOS + '"></i>Con cupos disponibles</span>' +
     '<span><i class="pt" style="background:' + COLOR_SIN_CUPOS + '"></i>Sin cupos disponibles (llena)</span>' +
     '<i class="sep"></i>' +

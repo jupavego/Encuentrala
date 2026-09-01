@@ -193,6 +193,12 @@ details.card[open] summary h2::before{content:"–  "}
   max-height:280px;overflow-y:auto;background:var(--card);border:2px solid var(--rule2);
   border-radius:var(--radio-sm);box-shadow:var(--shadow-lg)}
 .candidatos.desplegable:not(:empty){padding:6px}
+/* Vacio = no existe. El borde de 2px se aplicaba SIEMPRE, tambien con la
+   lista cerrada: como el desplegable va de -22px a -22px (todo el ancho de
+   la tarjeta), quedaba una banda verde de 4px cruzando la tarjeta debajo de
+   cada campo. Se leia como un separador grueso entre los filtros, y era el
+   motivo principal de que el panel se sintiera apenuscado. */
+.candidatos.desplegable:empty{display:none}
 /* pista secundaria dentro de cada opcion del desplegable (n de UDS, tipo de
    territorio, corregimiento al que pertenece la vereda) */
 .candidato .pista{display:block;font-size:10.5px;font-weight:600;color:var(--ink3);margin-top:2px}
@@ -208,13 +214,24 @@ details.card[open] summary h2::before{content:"–  "}
    peso visual que los campos de arriba y peleaba con ellos por la atencion.
    Ahora va como texto con un separador tenue encima -- presente, pero
    claramente por debajo de los tres filtros en la jerarquia. */
-#btnVeredasMuni{display:none;margin:16px 0 0;width:100%;
-  background:none;color:var(--ink2);border:none;border-top:1px solid var(--rule);
-  border-radius:0;padding:14px 4px 0;font-size:12px;font-weight:700;
-  font-family:var(--display);text-align:left;transition:color .15s}
-#btnVeredasMuni::before{content:"◍";margin-right:8px;color:var(--mde-amarillo-osc);font-size:13px}
-#btnVeredasMuni:hover{color:var(--icbf-verde-osc)}
-#btnVeredasMuni.visible{display:block}
+/* Interruptor de la capa de veredas, al extremo derecho de la leyenda del
+   mapa. margin-left:auto lo empuja hasta el borde: la leyenda explica lo que
+   se ve dibujado y esto enciende y apaga una de esas capas, asi que el par
+   se lee junto. Pastilla discreta, mas liviana que los botones de accion del
+   sitio -- no compite con "Buscar direccion" ni con "Descargar Excel". */
+#btnVeredasMuni{display:none;margin-left:auto;flex:0 0 auto;
+  background:#FFFCF0;color:#5C4400;border:1.5px solid var(--mde-amarillo);
+  border-radius:var(--radio-pill);padding:6px 14px;font-size:11.5px;font-weight:700;
+  font-family:var(--display);white-space:nowrap;
+  transition:background .15s,border-color .15s}
+#btnVeredasMuni::before{content:"◍";margin-right:7px;color:var(--mde-amarillo-osc);font-size:12px}
+#btnVeredasMuni:hover{background:var(--mde-amarillo);border-color:var(--mde-amarillo-osc)}
+#btnVeredasMuni.visible{display:inline-flex;align-items:center}
+/* en angosto la leyenda ya envuelve; el boton pasa a su propia linea y deja
+   de estar pegado al borde derecho. */
+@media (max-width:560px){
+  #btnVeredasMuni{margin-left:0}
+}
 
 .buscar-dir{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px}
 .buscar-dir input{
@@ -251,13 +268,22 @@ details.card[open] summary h2::before{content:"–  "}
        Complemento
    Borde de 1.5px (antes 2.5) y amarillo suave: dentro de una tarjeta ya
    contenida no necesita gritar tanto como cuando era una franja suelta. */
-.direccion-partes{display:flex;flex-wrap:wrap;gap:9px 8px;align-items:end;
-  margin:14px 0 0;padding:14px;background:#FFFCF0;
+.direccion-partes{display:flex;flex-wrap:wrap;gap:10px 12px;align-items:end;
+  margin:14px 0 0;padding:14px 16px;background:#FFFCF0;
   border:1.5px solid var(--mde-amarillo);border-radius:var(--radio-sm)}
-/* en esta columna todo va a renglon completo salvo la fila de numeros, que
-   se reparte internamente (ver .fila-numeros). */
-.direccion-partes > div{flex:1 1 100%}
-.direccion-partes button{width:100%;margin-top:2px}
+/* Debajo del mapa hay ~790px: los seis campos vuelven a caber en una fila,
+   que es la forma para la que estaba pensado este formulario. Las bases de
+   flex estan puestas para que, al angostarse (el tablero pasa a una sola
+   columna por debajo de 1150px), envuelvan en un orden que se siga leyendo
+   como una direccion y no en cualquier punto. */
+.direccion-partes .campo-via{flex:0 1 140px}
+.direccion-partes .fila-numeros{flex:1 1 260px}
+.direccion-partes .campo-ancho{flex:2 1 230px}
+/* el boton no alcanza a caber junto a los tres campos (791px disponibles
+   contra ~950 que pediria la fila completa), asi que cae a su propio
+   renglon: alineado a la derecha se lee como el cierre del formulario, y no
+   como un elemento suelto arrimado al margen izquierdo. */
+.direccion-partes button{flex:0 0 auto;margin-left:auto}
 /* Numero # Cruce - Placa en un solo renglon: los tres campos se reparten el
    ancho sobrante y los separadores no consumen nada. */
 .fila-numeros{display:flex;align-items:end;gap:6px}
@@ -592,7 +618,6 @@ footer.build .autoria{display:inline-block;margin-top:12px;font-size:10.5px;font
           <input type="text" id="inputVereda" placeholder="Elige primero un municipio" autocomplete="off" disabled>
           <div class="candidatos desplegable" id="listaVeredas"></div>
         </div>
-        <button type="button" id="btnVeredasMuni">Ocultar el contorno de las demás veredas</button>
       </div>
 
       <div class="card">
@@ -606,55 +631,7 @@ footer.build .autoria{display:inline-block;margin-top:12px;font-size:10.5px;font
         <div class="nota" id="estadoDir"></div>
         <div class="candidatos" id="candidatosDir"></div>
 
-        <!-- Antes vivia en una franja colapsable a lo ancho de la pagina,
-             debajo del tablero. Se sube aqui, a la columna de controles: es
-             el mismo paso ("marca el punto") por otra via, y la columna
-             tenia espacio de sobra porque el mapa de al lado es mas alto.
-             Ya no se colapsa -- si cabe entero, esconderlo solo agrega un
-             clic entre el usuario y el campo que necesita. -->
-        <div class="direccion-partes">
-          <p class="direccion-partes-titulo">¿No encontró la dirección? Ármala por partes</p>
-          <div class="campo-ancho">
-            <label for="viaTipo">Vía</label>
-            <select id="viaTipo">
-              <option>Calle</option>
-              <option>Carrera</option>
-              <option>Avenida</option>
-              <option>Avenida Calle</option>
-              <option>Avenida Carrera</option>
-              <option>Diagonal</option>
-              <option>Transversal</option>
-              <option>Circular</option>
-              <option>Autopista</option>
-              <option value="Vía">Vía (otra)</option>
-            </select>
-          </div>
-          <!-- los tres numeros y sus separadores van en su propio contenedor:
-               sueltos dentro del flex de .direccion-partes, en una columna
-               angosta el "#" y el "-" se envolvian a un renglon aparte,
-               separados de los campos que separan. -->
-          <div class="fila-numeros">
-            <div>
-              <label for="viaNum1">Número</label>
-              <input type="text" id="viaNum1" placeholder="45 o 45A">
-            </div>
-            <div class="separador" aria-hidden="true">#</div>
-            <div>
-              <label for="viaNum2">Cruce</label>
-              <input type="text" id="viaNum2" placeholder="23 o 23B">
-            </div>
-            <div class="separador" aria-hidden="true">-</div>
-            <div>
-              <label for="viaNum3">Placa</label>
-              <input type="text" id="viaNum3" placeholder="10">
-            </div>
-          </div>
-          <div class="campo-ancho">
-            <label for="viaComplemento">Complemento (barrio, vereda, interior… opcional)</label>
-            <input type="text" id="viaComplemento" placeholder="Ej: Barrio Centro, interior 2">
-          </div>
-          <button type="button" id="btnBuscarPartes" disabled>Buscar esta dirección</button>
-        </div>
+
       </div>
 
     </div>
@@ -677,7 +654,63 @@ footer.build .autoria{display:inline-block;margin-top:12px;font-size:10.5px;font
             </div>
           </div>
         </div>
-        <div class="leyenda-mapa" id="leyendaBandas"></div>
+        <!-- El interruptor de la capa de veredas vive aqui, no en la tarjeta
+             de filtros: lo que enciende y apaga es una capa DEL MAPA, y al
+             lado de los tres campos competia con ellos como si fuera un
+             cuarto filtro. Va al extremo derecho de la leyenda (ver el
+             margin-left:auto del CSS), que es la fila que ya explica lo que
+             se ve dibujado. -->
+        <div class="leyenda-mapa" id="leyendaBandas">
+          <button type="button" id="btnVeredasMuni">Ocultar el contorno de las demás veredas</button>
+        </div>
+        <!-- Debajo del mapa, en la columna del mapa: es el espacio que
+             quedaba sin usar, y ahi el formulario recupera el ancho para el
+             que estaba pensado (los seis campos en una sola fila). En la
+             columna de controles, de 380px, tenia que partirse en cuatro
+             renglones y estiraba esa columna muy por debajo del mapa. -->
+        <div class="direccion-partes">
+        <p class="direccion-partes-titulo">¿No encontró la dirección? Ármala por partes</p>
+        <div class="campo-via">
+          <label for="viaTipo">Vía</label>
+          <select id="viaTipo">
+            <option>Calle</option>
+            <option>Carrera</option>
+            <option>Avenida</option>
+            <option>Avenida Calle</option>
+            <option>Avenida Carrera</option>
+            <option>Diagonal</option>
+            <option>Transversal</option>
+            <option>Circular</option>
+            <option>Autopista</option>
+            <option value="Vía">Vía (otra)</option>
+          </select>
+        </div>
+        <!-- los tres numeros y sus separadores van en su propio contenedor:
+             sueltos dentro del flex de .direccion-partes, en una columna
+             angosta el "#" y el "-" se envolvian a un renglon aparte,
+             separados de los campos que separan. -->
+        <div class="fila-numeros">
+          <div>
+            <label for="viaNum1">Número</label>
+            <input type="text" id="viaNum1" placeholder="45 o 45A">
+          </div>
+          <div class="separador" aria-hidden="true">#</div>
+          <div>
+            <label for="viaNum2">Cruce</label>
+            <input type="text" id="viaNum2" placeholder="23 o 23B">
+          </div>
+          <div class="separador" aria-hidden="true">-</div>
+          <div>
+            <label for="viaNum3">Placa</label>
+            <input type="text" id="viaNum3" placeholder="10">
+          </div>
+        </div>
+        <div class="campo-ancho">
+          <label for="viaComplemento">Complemento (barrio, vereda, interior… opcional)</label>
+          <input type="text" id="viaComplemento" placeholder="Ej: Barrio Centro, interior 2">
+        </div>
+        <button type="button" id="btnBuscarPartes" disabled>Buscar esta dirección</button>
+      </div>
       </div>
     </div>
   </div>
