@@ -1320,7 +1320,15 @@ const ESTILO_VEREDA = { color: COLOR_ZONA, weight: 3, fillColor: RELLENO_ZONA, f
 // las demas veredas del municipio: solo insinuadas, sin relleno, para que se
 // vean "las veredas que lo rodean" sin competir con la zona elegida ni tapar
 // las UDS.
-const ESTILO_VEREDAS_CTX = { color: COLOR_ZONA, weight: 1.4, opacity: 0.85, fill: false, dashArray: "3 4", interactive: false };
+// CONTINUO, no punteado. El tipo de trazo codifica QUE division es, y tiene
+// que significar lo mismo en todo el mapa:
+//     discontinuo = corregimiento     continuo = vereda
+// El grosor y la opacidad codifican otra cosa: si la zona esta elegida o si
+// es solo contexto. Antes esta capa iba punteada, asi que las veredas del
+// municipio se leian como corregimientos -- la unica entrada discontinua de
+// la leyenda -- y contradecia su propia entrada "Vereda", que muestra trazo
+// continuo.
+const ESTILO_VEREDAS_CTX = { color: COLOR_ZONA, weight: 1.2, opacity: 0.7, fill: false, interactive: false };
 // El amarillo institucional sobre los tiles de OpenStreetMap (verdes y ocres
 // en zona rural, que es donde estan casi todas las veredas) se pierde: medido
 // en pantalla, el trazo se dibujaba pero era practicamente invisible. La
@@ -1989,9 +1997,15 @@ function pintarLeyendaCupos() {
     '<i class="sep"></i>' +
     // las tres zonas, de la mas general a la mas especifica -- misma jerarquia
     // que se ve en el mapa (ver ESTILO_CORR / ESTILO_VEREDA mas arriba).
+    // Cuatro entradas, una por cada cosa que el mapa dibuja de verdad: antes
+    // eran tres y el contorno de las demas veredas -- que si se pinta -- no
+    // aparecia por ningun lado.
+    // El trazo dice QUE division es (discontinuo = corregimiento, continuo =
+    // vereda) y el grosor/relleno dicen si esta elegida o es solo contexto.
     '<span><i class="zn" style="border:2.5px solid #2F6B10;background:rgba(95,168,41,.18)"></i>Municipio</span>' +
     '<span><i class="zn" style="border:2.5px dashed ' + COLOR_ZONA + ';background:rgba(255,220,47,.22)"></i>Corregimiento</span>' +
-    '<span><i class="zn" style="border:2.5px solid ' + COLOR_ZONA + ';background:rgba(255,220,47,.45)"></i>Vereda</span>';
+    '<span><i class="zn" style="border:2.5px solid ' + COLOR_ZONA + ';background:rgba(255,220,47,.45)"></i>Vereda elegida</span>' +
+    '<span><i class="zn" style="border:1.2px solid ' + COLOR_ZONA + ';opacity:.7"></i>Demás veredas</span>';
 }
 
 // los campos de Latitud/Longitud reflejan SIEMPRE el punto marcado, sin
