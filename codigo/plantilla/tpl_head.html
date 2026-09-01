@@ -25,6 +25,9 @@
   --icbf-verde:#5FA829; --icbf-verde-osc:#2F6B10; --icbf-verde-suave:#EAF5DC;
   --mde-amarillo:#FFDC2F; --mde-amarillo-osc:#C99A00;
   --azul:#0B6FA8; --violeta:#7B3FA0; --rojo:#D64545;
+  /* pin del personaje indigena del header (mismo diseno del favicon) */
+  --pin-piel:#B97852; --pin-piel-clara:#C98B65; --pin-cabello:#241812; --pin-osc:#29221F;
+  --pin-cinta-roja:#D95C4F; --pin-cinta-azul:#4D9FD7;
 
   --paper:#FFFFFF; --card:#FFFFFF; --sunk:#F1F8E9;
   --ink:#14210F; --ink2:#4A5C43; --ink3:#7C8B73;
@@ -52,30 +55,43 @@ select,input{font-family:var(--sans)}
 #app{max-width:1500px;margin:0 auto;padding:18px 22px 28px}
 header.top{
   display:flex;align-items:center;gap:16px;flex-wrap:wrap;
-  padding:26px 28px;margin:0 0 20px;color:#fff;position:relative;overflow:hidden;
+  padding:26px 130px 26px 28px;margin:0 0 20px;color:#fff;position:relative;overflow:hidden;
   background:linear-gradient(120deg,var(--icbf-verde-osc) 0%,var(--icbf-verde) 68%,#6FC534 100%);
   border-radius:24px;
   box-shadow:var(--shadow-lg);
 }
-header.top::after{
-  content:"";position:absolute;right:-32px;top:-32px;width:120px;height:120px;
-  border-radius:50%;background:var(--mde-amarillo);opacity:.95;pointer-events:none;
+/* estela decorativa de ondas + nodos (mismo patron del mockup del banner),
+   recorriendo el panel detras del texto -- puramente ambiental, no lleva
+   nada interactivo, por eso pointer-events:none. */
+header.top .bg-onda{position:absolute;inset:0;width:100%;height:100%;z-index:0;pointer-events:none}
+/* el personaje-pin del favicon, ahora tambien en el extremo del banner --
+   misma pieza, reutilizada para que el icono de pestana y el header se
+   sientan como el mismo personaje. */
+header.top .pin-personaje{
+  position:absolute;right:-4px;top:50%;transform:translateY(-50%);
+  width:96px;height:104px;z-index:1;pointer-events:none;
+  filter:drop-shadow(0 4px 10px rgba(0,0,0,.22));
 }
+header.top .pin-personaje svg{width:100%;height:100%;display:block}
 /* en movil el h1 (25px, bold) envuelve a 2 lineas dentro de un header
-   angosto -- el circulo decorativo, pensado para un header ancho de
-   escritorio, terminaba tapando el final de la primera linea ("más").
-   Se achica y se recorre para que quede solo como acento de esquina, sin
-   alcanzar el texto. */
+   angosto -- el pin, pensado para un header ancho de escritorio, terminaba
+   tapando el final de la primera linea ("más"). Se achica progresivamente
+   y desaparece del todo en el ancho mas angosto. */
+@media (max-width:640px){
+  header.top{padding-right:88px}
+  header.top .pin-personaje{width:66px;height:72px;right:-2px}
+}
 @media (max-width:480px){
-  header.top::after{width:60px;height:60px;right:-18px;top:-18px}
+  header.top{padding-right:28px}
+  header.top .pin-personaje{display:none}
   header.top h1{font-size:21px}
 }
 header.top h1{
-  font-size:25px;line-height:1.1;letter-spacing:-.4px;color:#fff;font-weight:900;position:relative;
+  font-size:25px;line-height:1.1;letter-spacing:-.4px;color:#fff;font-weight:900;position:relative;z-index:1;
 }
 header.top .sub{
   font-size:12px;color:#EAF7DC;margin-top:5px;font-weight:600;font-family:var(--sans);
-  position:relative;
+  position:relative;z-index:1;
 }
 
 .tablero{display:grid;grid-template-columns:380px 1fr;gap:20px;align-items:start}
@@ -92,33 +108,6 @@ header.top .sub{
 
 .panel-mapa .card{padding:14px}
 
-/* franja completa debajo del header, antes del tablero de dos columnas --
-   los dos metodos alternativos de ubicar el punto (direccion por partes,
-   coordenadas), siempre a la vista sin tener que entrar a la tarjeta
-   "2. Marca el punto". */
-.fila-toggles{background:var(--card);border:1px solid var(--rule);border-radius:var(--radio-sm);
-  margin:0 0 20px;box-shadow:var(--shadow);overflow:hidden}
-.toggle-extra{margin:0;min-width:0}
-/* el <summary> es el disparador nativo de <details> -- se estira a todo
-   el ancho de la tarjeta (no solo el texto) para que toda la franja sea
-   clicable, con un icono real (chevron en insignia circular, mismo patron
-   que .grupo-banda mas abajo) que rota al abrir. Paleta amarilla propia
-   (no verde) para que se sienta mas vistoso y distinto del resto del
-   sitio, en linea con la caja amarilla que ya usa el formulario abierto. */
-.toggle-extra summary{cursor:pointer;display:flex;align-items:center;justify-content:space-between;
-  gap:14px;font-size:13.5px;font-weight:800;color:#5C4400;
-  list-style:none;padding:15px 22px;user-select:none;
-  background:linear-gradient(120deg,#FFFBEA 0%,#FFEFB0 100%);
-  transition:background .18s}
-.toggle-extra summary:hover{background:linear-gradient(120deg,#FFF6D6,#FFE68A)}
-.toggle-extra summary::-webkit-details-marker{display:none}
-.toggle-extra summary::after{content:"▾";display:flex;align-items:center;justify-content:center;
-  flex:0 0 auto;width:26px;height:26px;border-radius:50%;background:var(--mde-amarillo);
-  color:#5C4400;font-weight:900;font-size:13px;box-shadow:0 3px 8px rgba(201,154,0,.35);
-  transition:transform .25s,background-color .15s,color .15s}
-.toggle-extra[open] summary::after{transform:rotate(-180deg);background-color:var(--mde-amarillo-osc);color:#fff}
-.toggle-extra .direccion-partes{margin:12px 22px 20px}
-
 details.card summary{cursor:pointer;list-style:none}
 details.card summary::-webkit-details-marker{display:none}
 details.card summary h2::before{content:"+  ";color:var(--icbf-verde)}
@@ -131,37 +120,101 @@ details.card[open] summary h2::before{content:"–  "}
 .card:hover{transform:translateY(-3px);box-shadow:var(--shadow-lg)}
 .panel-mapa .card:hover{transform:none;box-shadow:var(--shadow)}
 .card + .card{margin-top:20px}
-.tablero + .card,.tablero + .fila-toggles{margin-top:20px}
+.tablero + .card{margin-top:20px}
 .card h2{font-size:18px;margin-bottom:11px;color:var(--icbf-verde-osc);font-weight:900;letter-spacing:-.2px}
 .card h2 small{font-weight:600;color:var(--ink2);font-family:var(--sans);display:block;margin-top:5px;
   letter-spacing:0;font-size:12px}
 .nota{font-size:12px;color:var(--ink3);line-height:1.5;margin:2px 2px 14px;font-weight:500}
 
-.grupo-sel{display:flex;flex-direction:column;gap:6px;margin-bottom:4px;position:relative}
-.grupo-sel label{font-size:11px;font-weight:700;color:var(--ink2);text-transform:uppercase;letter-spacing:.8px}
-#inputMunicipio{
-  width:100%;background:var(--sunk);border:2.5px solid var(--rule2);border-radius:var(--radio-pill);
-  padding:12px 44px 12px 20px;font-size:14.5px;color:var(--ink);font-weight:700;font-family:var(--display);
-  transition:border-color .15s,transform .1s;
+/* los tres filtros territoriales (municipio -> corregimiento -> vereda) usan
+   exactamente el mismo patron hibrido select+buscador, asi que el estilo se
+   define una sola vez por clase en vez de por id. */
+.grupo-sel{display:flex;flex-direction:column;gap:6px;margin-bottom:4px;position:relative;z-index:1}
+/* el desplegable de un grupo tiene que pintarse por ENCIMA de los grupos que
+   siguen (y de la tarjeta de abajo). La lista solo existe mientras el campo
+   tiene el foco -- ver onblur en el JS -- asi que :focus-within alcanza para
+   levantar el grupo activo sin necesidad de manejar z-index a mano. */
+.grupo-sel:focus-within{z-index:50}
+/* Aire entre los tres filtros. Antes eran 12px y, con anillos de 2.5px
+   alrededor de cada campo, los tres se leian como un bloque apretado. */
+.grupo-sel + .grupo-sel{margin-top:18px}
+.grupo-sel label{display:flex;align-items:center;font-size:10.5px;font-weight:700;
+  color:var(--ink3);text-transform:uppercase;letter-spacing:.7px}
+/* El color de cada nivel (verde = municipio, amarillo = zona, igual que sus
+   poligonos en el mapa) pasa a un punto de 7px en la etiqueta, en vez de
+   tenir la pildora entera. Se conserva la correspondencia control<->mapa,
+   pero deja de haber tres bloques de color grandes compitiendo dentro de una
+   tarjeta de 380px de ancho. */
+.grupo-sel label::before{content:"";flex:0 0 auto;width:7px;height:7px;border-radius:50%;
+  margin-right:8px;background:var(--icbf-verde)}
+.grupo-sel.territorio label::before{background:var(--mde-amarillo-osc)}
+.grupo-sel label .op{font-weight:600;color:var(--ink3);text-transform:none;letter-spacing:0;
+  font-size:10px;opacity:.8;margin-left:5px}
+/* Borde de 1.5px (antes 2.5) y en reposo del tono mas claro disponible: el
+   campo se define por su relleno, no por su contorno. El acento aparece
+   cuando el campo importa -- al pasar el mouse, al enfocarlo, o cuando ya
+   tiene un valor elegido. */
+.grupo-sel input{
+  width:100%;background:var(--sunk);border:1.5px solid var(--rule);border-radius:var(--radio-pill);
+  padding:12px 42px 12px 18px;font-size:14.5px;color:var(--ink);font-weight:700;font-family:var(--display);
+  transition:border-color .15s,background .15s,box-shadow .15s;
 }
-#inputMunicipio:hover{border-color:var(--icbf-verde)}
-#inputMunicipio:focus{border-color:var(--icbf-verde);outline:none}
+.grupo-sel input:hover:not(:disabled){border-color:var(--rule2)}
+/* anillo de foco suave en vez de un borde mas grueso: marca el campo activo
+   sin cambiar su geometria (un borde que engorda al enfocar desplaza el
+   texto un pixel y se siente inestable). */
+.grupo-sel input:focus{border-color:var(--icbf-verde);outline:none;
+  box-shadow:0 0 0 3px rgba(95,168,41,.14)}
+.grupo-sel input:not(:placeholder-shown){border-color:var(--rule2);background:var(--icbf-verde-suave)}
+.grupo-sel input:disabled{opacity:.6;cursor:not-allowed;background:#F7F9F4;
+  color:var(--ink3);font-weight:600}
+/* los dos filtros de abajo (corregimiento/vereda) son de la familia amarilla
+   -- la misma que sus poligonos en el mapa (ver COLOR_TERRITORIO en el JS),
+   para que se lea de una que ese control y esa zona pintada son lo mismo. */
+.grupo-sel.territorio input:focus{border-color:var(--mde-amarillo-osc);
+  box-shadow:0 0 0 3px rgba(201,154,0,.16)}
+.grupo-sel.territorio input:not(:placeholder-shown){border-color:var(--mde-amarillo);background:#FFFCF0}
 /* flechita de "desplegable" -- puramente visual, el input sigue siendo de
    texto libre; solo avisa que hacer clic sin escribir muestra la lista
-   completa, no solo resultados filtrados. */
-.grupo-sel::after{content:"";position:absolute;right:20px;top:41px;width:9px;height:9px;
-  border-right:2.5px solid var(--ink3);border-bottom:2.5px solid var(--ink3);
-  transform:rotate(45deg);pointer-events:none}
+   completa, no solo resultados filtrados.
+   Anclada por "bottom" y no por "top": asi queda centrada en el campo
+   aunque la etiqueta de arriba cambie de tamano o pase a dos lineas. */
+.grupo-sel::after{content:"";position:absolute;right:19px;bottom:21px;width:8px;height:8px;
+  border-right:2px solid var(--ink3);border-bottom:2px solid var(--ink3);
+  transform:rotate(45deg);pointer-events:none;opacity:.65;transition:opacity .15s}
+.grupo-sel:focus-within::after{opacity:1;border-color:var(--icbf-verde-osc)}
 /* left/right en -22px (mismo valor que el padding horizontal de .card) para
    que el desplegable llegue hasta el borde de la tarjeta, no solo el ancho
    del input -- si se queda mas angosto que la tarjeta, el borde verde
    redondeado de la tarjeta de abajo ("2. Marca el punto") asoma por los
    costados mientras se solapan verticalmente (reportado como "se ve un
    conflicto" entre el desplegable y esa tarjeta). */
-#listaMunicipios{position:absolute;top:100%;left:-22px;right:-22px;z-index:40;margin-top:6px;
+.candidatos.desplegable{position:absolute;top:100%;left:-22px;right:-22px;z-index:40;margin-top:6px;
   max-height:280px;overflow-y:auto;background:var(--card);border:2px solid var(--rule2);
   border-radius:var(--radio-sm);box-shadow:var(--shadow-lg)}
-#listaMunicipios:not(:empty){padding:6px}
+.candidatos.desplegable:not(:empty){padding:6px}
+/* pista secundaria dentro de cada opcion del desplegable (n de UDS, tipo de
+   territorio, corregimiento al que pertenece la vereda) */
+.candidato .pista{display:block;font-size:10.5px;font-weight:600;color:var(--ink3);margin-top:2px}
+.candidato:hover .pista{color:var(--icbf-verde-osc)}
+
+/* interruptor de la capa de contexto (el contorno tenue de TODAS las veredas
+   del municipio). No quita el filtro -- corregimiento y vereda se comportan
+   igual que el de municipio, siempre reflejan donde esta el pin -- solo
+   despeja el mapa cuando el municipio tiene muchas veredas (Turbo tiene 235)
+   y el rayado estorba para ver las UDS. */
+/* Accion secundaria, no un tercer bloque de color: es un interruptor de una
+   capa del mapa, no un filtro. Antes era una caja amarilla llena del mismo
+   peso visual que los campos de arriba y peleaba con ellos por la atencion.
+   Ahora va como texto con un separador tenue encima -- presente, pero
+   claramente por debajo de los tres filtros en la jerarquia. */
+#btnVeredasMuni{display:none;margin:16px 0 0;width:100%;
+  background:none;color:var(--ink2);border:none;border-top:1px solid var(--rule);
+  border-radius:0;padding:14px 4px 0;font-size:12px;font-weight:700;
+  font-family:var(--display);text-align:left;transition:color .15s}
+#btnVeredasMuni::before{content:"◍";margin-right:8px;color:var(--mde-amarillo-osc);font-size:13px}
+#btnVeredasMuni:hover{color:var(--icbf-verde-osc)}
+#btnVeredasMuni.visible{display:block}
 
 .buscar-dir{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px}
 .buscar-dir input{
@@ -189,24 +242,43 @@ details.card[open] summary h2::before{content:"–  "}
 }
 .candidato:hover{border-color:var(--icbf-verde);color:var(--icbf-verde-osc);background:var(--icbf-verde-suave)}
 
-.direccion-partes{display:flex;flex-wrap:wrap;gap:12px;align-items:end;
-  margin:6px 0 16px;padding:18px 20px;background:#FFFBEA;
-  border:2.5px solid var(--mde-amarillo);border-radius:var(--radio-sm)}
-.direccion-partes > div{flex:1 1 100px;min-width:90px}
-.direccion-partes .campo-ancho{flex:2 1 220px}
+/* Vive dentro de la tarjeta "2. Marca el punto", en la columna de 380px --
+   antes era una franja a todo el ancho de la pagina, donde los 6 campos
+   entraban en una sola fila. Aqui no caben asi, y el reparto se ordena a
+   proposito en tres renglones, que ademas es como se dicta una direccion:
+       Via
+       Numero # Cruce - Placa
+       Complemento
+   Borde de 1.5px (antes 2.5) y amarillo suave: dentro de una tarjeta ya
+   contenida no necesita gritar tanto como cuando era una franja suelta. */
+.direccion-partes{display:flex;flex-wrap:wrap;gap:9px 8px;align-items:end;
+  margin:14px 0 0;padding:14px;background:#FFFCF0;
+  border:1.5px solid var(--mde-amarillo);border-radius:var(--radio-sm)}
+/* en esta columna todo va a renglon completo salvo la fila de numeros, que
+   se reparte internamente (ver .fila-numeros). */
+.direccion-partes > div{flex:1 1 100%}
+.direccion-partes button{width:100%;margin-top:2px}
+/* Numero # Cruce - Placa en un solo renglon: los tres campos se reparten el
+   ancho sobrante y los separadores no consumen nada. */
+.fila-numeros{display:flex;align-items:end;gap:6px}
+.fila-numeros > div{flex:1 1 0;min-width:0}
+.fila-numeros > .separador{flex:0 0 auto}
 /* separador visual "#"/"-" entre los campos numericos (Numero # Cruce -
    Placa), tal como se escribe una direccion colombiana -- alineado con
    align-self:flex-end + altura fija a la caja del input (no a la fila
    completa, que incluye la etiqueta de arriba). */
 .direccion-partes .separador{flex:0 0 auto;min-width:0;align-self:flex-end;
-  height:38px;display:flex;align-items:center;justify-content:center;
-  font-size:19px;font-weight:900;color:var(--mde-amarillo-osc);line-height:1;user-select:none}
-.direccion-partes-titulo{display:none}
-.direccion-partes label{display:block;font-size:10.5px;font-weight:700;color:var(--ink2);
-  text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px;white-space:nowrap}
+  height:36px;display:flex;align-items:center;justify-content:center;
+  font-size:16px;font-weight:900;color:var(--mde-amarillo-osc);line-height:1;user-select:none}
+/* Ya no esta escondido tras un <summary>: al dejar de ser colapsable, el
+   bloque necesita decir por si mismo para que sirve. */
+.direccion-partes-titulo{flex:1 1 100%;margin:0;font-size:12px;font-weight:800;
+  color:#5C4400;font-family:var(--display);line-height:1.35}
+.direccion-partes label{display:block;font-size:9.5px;font-weight:700;color:var(--ink2);
+  text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;white-space:nowrap}
 .direccion-partes select,.direccion-partes input{
-  width:100%;background:#fff;border:2px solid var(--rule2);border-radius:var(--radio-pill);
-  padding:9px 15px;font-size:13.5px;color:var(--ink);font-weight:600;font-family:inherit;
+  width:100%;background:#fff;border:1.5px solid var(--rule2);border-radius:var(--radio-pill);
+  padding:9px 12px;font-size:13px;color:var(--ink);font-weight:600;font-family:inherit;
   transition:border-color .15s}
 .direccion-partes select:hover,.direccion-partes select:focus,
 .direccion-partes input:hover,.direccion-partes input:focus{border-color:var(--mde-amarillo-osc);outline:none}
@@ -257,6 +329,14 @@ details.card[open] summary h2::before{content:"–  "}
   border-radius:var(--radio-sm);padding:7px 14px;margin-bottom:14px;
   display:flex;flex-direction:column;justify-content:center;overflow:hidden}
 .info-uds-vacio{margin:0;font-size:12.5px;color:var(--ink3);font-weight:600;line-height:1.5}
+/* el mismo panel, cuando lo que se esta mirando es una zona (vereda o
+   corregimiento) y no una UDS. Se tine de amarillo -- la familia territorial,
+   la misma de los dos filtros y de los poligonos -- para que se distinga de
+   un vistazo de que se esta leyendo, sin necesidad de leer la etiqueta. */
+.info-uds.zona{background:#FFFCF0;border-color:var(--mde-amarillo)}
+.info-uds.zona .info-uds-nombre{color:#5C4400}
+.info-uds.zona .info-uds-nombre span{background:var(--mde-amarillo);color:#5C4400;
+  padding:2px 8px;border-radius:999px;margin-right:8px}
 /* la etiqueta ("UDS", "Código", etc.) va EN LINEA con su valor, no encima
    -- antes cada campo eran 2 lineas (etiqueta arriba, valor abajo);
    ponerlas en la misma linea corta el alto del bloque de datos casi a la
@@ -309,6 +389,13 @@ details.card[open] summary h2::before{content:"–  "}
   font-size:12.5px;font-weight:700;color:var(--ink2);margin-top:14px}
 .leyenda-mapa .pt{display:inline-block;width:12px;height:12px;border-radius:50%;
   margin-right:6px;vertical-align:-1px;border:2px solid #fff;box-shadow:0 0 0 1.5px rgba(0,0,0,.15)}
+/* muestra de las capas territoriales: un rectangulo con borde y relleno, no
+   un punto -- son zonas, no unidades, y asi la leyenda no las confunde con
+   las UDS. */
+.leyenda-mapa .zn{display:inline-block;width:18px;height:12px;border-radius:3px;
+  margin-right:6px;vertical-align:-1px}
+/* separador visual entre el bloque de UDS y el de zonas dentro de la leyenda */
+.leyenda-mapa .sep{width:1px;height:16px;background:var(--rule2);display:inline-block}
 .leaflet-popup-content{font-family:var(--sans);font-size:13px}
 .leaflet-popup-content b{display:block;margin-bottom:2px;font-weight:800}
 .leaflet-tooltip{font-family:var(--sans);font-size:12.5px;line-height:1.55;color:var(--ink);
@@ -340,7 +427,7 @@ details.card[open] summary h2::before{content:"–  "}
   display:inline-block}
 .grupo-banda .gb-cuerpo{border-top:2px solid var(--rule);padding:4px 4px 6px;overflow-x:auto}
 .tabla-scroll{overflow-x:auto}
-table.tabla{width:100%;min-width:760px}
+table.tabla{width:100%;min-width:980px}
 table.tabla thead th{
   text-align:left;font-size:11px;color:var(--icbf-verde-osc);text-transform:uppercase;
   letter-spacing:.5px;font-weight:800;padding:10px;background:var(--sunk);
@@ -360,6 +447,57 @@ table.tabla tbody tr.fila-resaltada{background:var(--mde-amarillo) !important}
 .chip-cupos{display:inline-block;padding:3px 12px;border-radius:999px;font-size:11px;font-weight:800;color:#fff}
 .chip-cupos.con{background:var(--icbf-verde)}
 .chip-cupos.sin{background:var(--rojo)}
+
+/* ---------- bloque "UDS dentro de <vereda/corregimiento>" ----------
+   Va ARRIBA de los grupos por banda de distancia y responde una pregunta
+   distinta: no "que tan cerca esta cada UDS del pin" sino "cuales caen dentro
+   de esta zona", sin importar la distancia -- una vereda grande puede tener
+   UDS mas alla del radio que termino usando la busqueda por cercania, y esas
+   tienen que aparecer igual. Familia amarilla, la misma de los poligonos de
+   territorio en el mapa y de sus dos filtros. */
+.bloque-territorio{border:2.5px solid var(--mde-amarillo);border-radius:var(--radio-sm);
+  background:#FFFDF5;margin-bottom:18px;overflow:hidden}
+.bloque-territorio > header{display:flex;align-items:center;gap:12px;flex-wrap:wrap;
+  padding:14px 18px;background:linear-gradient(120deg,#FFFBEA 0%,#FFEFB0 100%);
+  border-bottom:2px solid var(--mde-amarillo)}
+.bloque-territorio .bt-tipo{font-size:10px;font-weight:800;color:#8A6A00;text-transform:uppercase;
+  letter-spacing:.9px;background:#fff;border-radius:999px;padding:4px 11px;flex:0 0 auto}
+.bloque-territorio .bt-nombre{flex:1 1 200px;font-size:16px;font-weight:900;color:#5C4400;
+  font-family:var(--display);letter-spacing:-.2px}
+.bloque-territorio .bt-badges{display:flex;gap:8px;flex-wrap:wrap}
+/* ">" a proposito: solo las insignias de conteo, que son hijas directas,
+   deben llevar la pildora amarilla -- no cualquier <span> que llegue a
+   anidarse aqui dentro. */
+.bloque-territorio .bt-badges > span{font-size:11.5px;font-weight:800;color:#5C4400;
+  background:var(--mde-amarillo);padding:4px 12px;border-radius:999px}
+
+/* --------- descarga de la hoja CUENTAME ---------
+   Un unico boton en toda la pagina, a la derecha del titulo "Resultados".
+   Verde solido (no amarillo): es una ACCION, no una etiqueta de dato -- con
+   la paleta amarilla se leeria como una insignia mas de las que ya hay
+   alrededor, y no como algo que se puede pulsar. */
+.btn-excel{display:inline-flex;align-items:center;gap:7px;cursor:pointer;
+  background:var(--icbf-verde);color:#fff;border:none;border-radius:999px;
+  padding:7px 16px;font-size:12px;font-weight:800;font-family:var(--display);
+  letter-spacing:-.1px;white-space:nowrap;
+  box-shadow:0 4px 12px rgba(95,168,41,.3);
+  transition:transform .15s,box-shadow .15s,background .15s}
+.btn-excel:hover{background:var(--icbf-verde-osc);transform:translateY(-2px);
+  box-shadow:0 8px 18px rgba(95,168,41,.4)}
+.btn-excel:active{transform:translateY(0)}
+.btn-excel span{font-size:14px;line-height:1}
+/* cabecera de "Resultados": titulo a la izquierda, boton a la derecha, y en
+   pantallas angostas el boton cae debajo en vez de apretar el titulo. */
+.cabecera-resultados{display:flex;align-items:flex-start;justify-content:space-between;
+  gap:14px;flex-wrap:wrap;margin-bottom:11px}
+.cabecera-resultados h2{margin-bottom:0}
+.cabecera-resultados #descargaResultados:empty{display:none}
+.bloque-territorio .bt-cuerpo{padding:4px 4px 6px;overflow-x:auto}
+.bloque-territorio .nota{margin:12px 16px}
+/* fila de una UDS que ademas cae dentro de la zona elegida, dentro de las
+   tablas por banda de distancia de mas abajo -- para poder distinguirla sin
+   tener que cruzar a ojo las dos tablas. */
+table.tabla tbody tr.fila-en-territorio td:first-child{box-shadow:inset 3px 0 0 var(--mde-amarillo-osc)}
 
 dl.fuentes{margin:0}
 dl.fuentes dt{font-weight:800;color:var(--icbf-verde-osc);margin-top:16px;font-size:14.5px}
@@ -386,6 +524,48 @@ footer.build .autoria{display:inline-block;margin-top:12px;font-size:10.5px;font
 <body>
 <div id="app">
   <header class="top">
+    <svg class="bg-onda" viewBox="0 0 1100 160" preserveAspectRatio="none" aria-hidden="true">
+      <g fill="none" stroke="rgba(255,255,255,.14)" stroke-width="1">
+        <circle cx="1010" cy="80" r="90"/><circle cx="1010" cy="80" r="180"/>
+        <circle cx="1010" cy="80" r="270"/><circle cx="1010" cy="80" r="360"/>
+        <circle cx="1010" cy="80" r="450"/><circle cx="1010" cy="80" r="540"/>
+        <circle cx="1010" cy="80" r="630"/><circle cx="1010" cy="80" r="720"/>
+      </g>
+      <g fill="#fff" opacity=".8">
+        <circle cx="940" cy="45" r="2"/><circle cx="910" cy="120" r="2.5"/>
+        <circle cx="860" cy="80" r="1.5"/><circle cx="820" cy="30" r="2"/>
+        <circle cx="780" cy="140" r="2.5"/><circle cx="740" cy="95" r="2"/>
+        <circle cx="690" cy="50" r="1.5"/><circle cx="650" cy="110" r="2.5"/>
+        <circle cx="610" cy="20" r="2"/><circle cx="560" cy="135" r="2"/>
+        <circle cx="520" cy="70" r="2.5"/><circle cx="470" cy="40" r="1.5"/>
+      </g>
+      <g fill="var(--mde-amarillo)" opacity=".85">
+        <circle cx="885" cy="105" r="2.5"/><circle cx="800" cy="65" r="2"/>
+        <circle cx="710" cy="130" r="2.5"/><circle cx="630" cy="75" r="2"/>
+        <circle cx="540" cy="25" r="2.5"/>
+      </g>
+    </svg>
+    <div class="pin-personaje">
+      <svg viewBox="0 0 240 240" aria-hidden="true">
+        <path fill="var(--mde-amarillo)" d="M120 12 C68 12 34 48 34 94 C34 145 82 180 120 221 C158 180 206 145 206 94 C206 48 172 12 120 12Z"/>
+        <path fill="var(--pin-cabello)" d="M75 96 C72 75 78 58 93 49 C107 40 124 40 139 48 C155 57 165 74 165 96 C158 84 150 78 142 75 C134 72 128 73 121 76 C114 67 106 64 98 68 C88 73 82 84 75 96Z"/>
+        <ellipse cx="120" cy="113" rx="44" ry="52" fill="var(--pin-piel)"/>
+        <ellipse cx="76" cy="113" rx="10" ry="15" fill="var(--pin-piel)"/>
+        <ellipse cx="164" cy="113" rx="10" ry="15" fill="var(--pin-piel)"/>
+        <path fill="var(--icbf-verde-osc)" d="M78 79 Q120 64 162 79 L160 87 Q120 73 80 87Z"/>
+        <path d="M94 77 L99 84 L104 76 L109 82 L114 74" stroke="var(--pin-cinta-roja)" stroke-width="3" fill="none" stroke-linecap="round"/>
+        <path d="M125 74 L130 82 L135 75 L140 83 L145 77" stroke="var(--pin-cinta-azul)" stroke-width="3" fill="none" stroke-linecap="round"/>
+        <ellipse cx="101" cy="108" rx="6.5" ry="4.5" fill="var(--pin-osc)"/>
+        <ellipse cx="139" cy="108" rx="6.5" ry="4.5" fill="var(--pin-osc)"/>
+        <circle cx="103" cy="106.5" r="1.4" fill="#fff"/>
+        <circle cx="141" cy="106.5" r="1.4" fill="#fff"/>
+        <path d="M120 111 Q114 123 120 126 Q126 123 120 111Z" fill="var(--pin-piel-clara)"/>
+        <ellipse cx="91" cy="127" rx="8" ry="4" fill="#D58B75" opacity=".45"/>
+        <ellipse cx="149" cy="127" rx="8" ry="4" fill="#D58B75" opacity=".45"/>
+        <path d="M104 135 Q120 148 136 135" stroke="var(--pin-osc)" stroke-width="3" fill="none" stroke-linecap="round"/>
+        <path fill="#fff" d="M120 174 C111 163 97 169 97 181 C97 193 120 202 120 202 C120 202 143 193 143 181 C143 169 129 163 120 174Z"/>
+      </svg>
+    </div>
     <div>
       <h1>Encontrala · UDS más cercana</h1>
       <div class="sub">Unidades de Servicio ICBF (Cuéntame) activas en los 125 municipios de Antioquia</div>
@@ -396,12 +576,23 @@ footer.build .autoria{display:inline-block;margin-top:12px;font-size:10.5px;font
     <div class="panel-controles">
 
       <div class="card">
-        <h2>1. Elige el municipio<small>acota la búsqueda de dirección y el mapa a esa zona</small></h2>
+        <h2>1. Elige el territorio<small>el municipio acota el mapa y la búsqueda de dirección; corregimiento y vereda son opcionales y llevan el pin dentro de esa zona</small></h2>
         <div class="grupo-sel">
           <label for="inputMunicipio">Municipio</label>
           <input type="text" id="inputMunicipio" placeholder="Escribe para buscar…" autocomplete="off">
-          <div class="candidatos" id="listaMunicipios"></div>
+          <div class="candidatos desplegable" id="listaMunicipios"></div>
         </div>
+        <div class="grupo-sel territorio">
+          <label for="inputCorregimiento">Corregimiento <span class="op">(opcional)</span></label>
+          <input type="text" id="inputCorregimiento" placeholder="Elige primero un municipio" autocomplete="off" disabled>
+          <div class="candidatos desplegable" id="listaCorregimientos"></div>
+        </div>
+        <div class="grupo-sel territorio">
+          <label for="inputVereda">Vereda <span class="op">(opcional)</span></label>
+          <input type="text" id="inputVereda" placeholder="Elige primero un municipio" autocomplete="off" disabled>
+          <div class="candidatos desplegable" id="listaVeredas"></div>
+        </div>
+        <button type="button" id="btnVeredasMuni">Ocultar el contorno de las demás veredas</button>
       </div>
 
       <div class="card">
@@ -414,6 +605,56 @@ footer.build .autoria{display:inline-block;margin-top:12px;font-size:10.5px;font
 
         <div class="nota" id="estadoDir"></div>
         <div class="candidatos" id="candidatosDir"></div>
+
+        <!-- Antes vivia en una franja colapsable a lo ancho de la pagina,
+             debajo del tablero. Se sube aqui, a la columna de controles: es
+             el mismo paso ("marca el punto") por otra via, y la columna
+             tenia espacio de sobra porque el mapa de al lado es mas alto.
+             Ya no se colapsa -- si cabe entero, esconderlo solo agrega un
+             clic entre el usuario y el campo que necesita. -->
+        <div class="direccion-partes">
+          <p class="direccion-partes-titulo">¿No encontró la dirección? Ármala por partes</p>
+          <div class="campo-ancho">
+            <label for="viaTipo">Vía</label>
+            <select id="viaTipo">
+              <option>Calle</option>
+              <option>Carrera</option>
+              <option>Avenida</option>
+              <option>Avenida Calle</option>
+              <option>Avenida Carrera</option>
+              <option>Diagonal</option>
+              <option>Transversal</option>
+              <option>Circular</option>
+              <option>Autopista</option>
+              <option value="Vía">Vía (otra)</option>
+            </select>
+          </div>
+          <!-- los tres numeros y sus separadores van en su propio contenedor:
+               sueltos dentro del flex de .direccion-partes, en una columna
+               angosta el "#" y el "-" se envolvian a un renglon aparte,
+               separados de los campos que separan. -->
+          <div class="fila-numeros">
+            <div>
+              <label for="viaNum1">Número</label>
+              <input type="text" id="viaNum1" placeholder="45 o 45A">
+            </div>
+            <div class="separador" aria-hidden="true">#</div>
+            <div>
+              <label for="viaNum2">Cruce</label>
+              <input type="text" id="viaNum2" placeholder="23 o 23B">
+            </div>
+            <div class="separador" aria-hidden="true">-</div>
+            <div>
+              <label for="viaNum3">Placa</label>
+              <input type="text" id="viaNum3" placeholder="10">
+            </div>
+          </div>
+          <div class="campo-ancho">
+            <label for="viaComplemento">Complemento (barrio, vereda, interior… opcional)</label>
+            <input type="text" id="viaComplemento" placeholder="Ej: Barrio Centro, interior 2">
+          </div>
+          <button type="button" id="btnBuscarPartes" disabled>Buscar esta dirección</button>
+        </div>
       </div>
 
     </div>
@@ -421,7 +662,7 @@ footer.build .autoria{display:inline-block;margin-top:12px;font-size:10.5px;font
     <div class="panel-mapa">
       <div class="card">
         <div class="info-uds" id="infoUds">
-          <p class="info-uds-vacio">Pasa el cursor sobre un punto del mapa para ver aquí su información — nombre, código, entidad, contrato, dirección, teléfono, servicio y cupos disponibles.</p>
+          <p class="info-uds-vacio">Pasa el cursor por el mapa para ver aquí la vereda sobre la que estás y su cobertura en cupos; ponlo sobre un punto para ver esa UDS en detalle — nombre, código, entidad, contrato, dirección, teléfono, servicio y cupos.</p>
         </div>
         <div class="mapa-wrap">
           <div id="mapaCerc"></div>
@@ -441,50 +682,11 @@ footer.build .autoria{display:inline-block;margin-top:12px;font-size:10.5px;font
     </div>
   </div>
 
-  <div class="fila-toggles">
-    <details class="toggle-extra">
-      <summary>¿No encontró la dirección? Armarla por partes</summary>
-      <div class="direccion-partes">
-        <div>
-          <label for="viaTipo">Vía</label>
-          <select id="viaTipo">
-            <option>Calle</option>
-            <option>Carrera</option>
-            <option>Avenida</option>
-            <option>Avenida Calle</option>
-            <option>Avenida Carrera</option>
-            <option>Diagonal</option>
-            <option>Transversal</option>
-            <option>Circular</option>
-            <option>Autopista</option>
-            <option value="Vía">Vía (otra)</option>
-          </select>
-        </div>
-        <div>
-          <label for="viaNum1">Número</label>
-          <input type="text" id="viaNum1" placeholder="45 o 45A">
-        </div>
-        <div class="separador" aria-hidden="true">#</div>
-        <div>
-          <label for="viaNum2">Cruce</label>
-          <input type="text" id="viaNum2" placeholder="23 o 23B">
-        </div>
-        <div class="separador" aria-hidden="true">-</div>
-        <div>
-          <label for="viaNum3">Placa</label>
-          <input type="text" id="viaNum3" placeholder="10">
-        </div>
-        <div class="campo-ancho">
-          <label for="viaComplemento">Complemento (barrio, vereda, interior… opcional)</label>
-          <input type="text" id="viaComplemento" placeholder="Ej: Barrio Centro, interior 2">
-        </div>
-        <button type="button" id="btnBuscarPartes" disabled>Buscar esta dirección</button>
-      </div>
-    </details>
-  </div>
-
   <div class="card">
-    <h2>Resultados<small id="subResultados"></small></h2>
+    <div class="cabecera-resultados">
+      <h2>Resultados<small id="subResultados"></small></h2>
+      <div id="descargaResultados"></div>
+    </div>
     <div id="resultados"></div>
   </div>
 
@@ -499,3 +701,5 @@ footer.build .autoria{display:inline-block;margin-top:12px;font-size:10.5px;font
 
 <script>
 const D = __DATOS__;
+const V = __VEREDAS__;
+const X = __CUENTAME__;
