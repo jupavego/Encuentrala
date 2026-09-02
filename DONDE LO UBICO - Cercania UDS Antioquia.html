@@ -2778,7 +2778,9 @@ function onMunicipioChange(nombre) {
   inputDir.disabled = false; btnBuscar.disabled = false; btnPartes.disabled = false;
   inputDir.placeholder = "Dirección en " + MUNI.nombre + ": Calle 45 # 23-10...";
   inputDir.value = "";
-  $("#estadoDir").textContent = "Pin ubicado por defecto en el centro de " + MUNI.nombre + " — arrástralo hasta el punto exacto, o busca una dirección arriba.";
+  $("#estadoDir").textContent = "Se ve " + MUNI.nombre + " completo, con el pin en la cabecera. " +
+    "Arrástralo hasta el punto exacto, busca una dirección arriba, o elige una vereda " +
+    "(la cabecera está en esa lista) para acercarte a una zona.";
   $("#candidatosDir").innerHTML = "";
   // cambio de municipio: se sueltan corregimiento/vereda anteriores y las dos
   // listas pasan a las de este municipio. La vereda concreta la vuelve a
@@ -2812,8 +2814,17 @@ function onMunicipioChange(nombre) {
     }
   }
   PUNTO = { lat: MUNI.centro[0], lon: MUNI.centro[1] };
-  colocarPin(false);
-  buscarYPintar();
+  // Los dos con mantenerVista=true, para que el encuadre al POLIGONO COMPLETO
+  // de arriba sea el que quede. Sin eso, colocarPin hacia un setView a zoom
+  // >=12 sobre el pin y buscarYPintar reencuadraba al anillo de busqueda: el
+  // municipio se abria mostrando solo el casco urbano y sus alrededores, y no
+  // se veia la extension real de lo que se acababa de elegir.
+  // El pin sigue cayendo en la cabecera -- solo cambia lo que se ENCUADRA --
+  // asi que la busqueda por cercania de al lado no se altera. Para mirar solo
+  // la cabecera esta el filtro de vereda, donde aparece como una vereda mas
+  // (tipo "Cabecera municipal", una por municipio).
+  colocarPin(false, true);
+  buscarYPintar(true);
 }
 
 /* ---------------- init ---------------- */
