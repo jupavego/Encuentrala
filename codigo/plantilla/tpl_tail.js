@@ -573,11 +573,17 @@ const SERVICIOS = (() => {
 // decirlo, o se lee como si fuera todo lo que hay.
 function sufijoServicio() { return SERVICIO ? " · servicio: " + SERVICIO : ""; }
 
-function udsDeZona(t) {
+// Sin aplicar el filtro de servicio: es la bolsa completa de la zona. La usa
+// la lista de servicios para saber que hay disponible ahi -- si usara
+// udsDeZona(), que ya viene filtrada, la lista se reduciria al servicio ya
+// elegido y no habria forma de cambiar a otro.
+function udsDeZonaSinFiltro(t) {
   if (!t) return [];
-  const base = t.tipo === "muni" ? UDS_POR_MUNI[t.idx]
-    : (t.tipo === "corr" ? UDS_POR_CORR[t.idx] : UDS_POR_VEREDA[t.idx]);
-  const lista = base || [];
+  return (t.tipo === "muni" ? UDS_POR_MUNI[t.idx]
+    : (t.tipo === "corr" ? UDS_POR_CORR[t.idx] : UDS_POR_VEREDA[t.idx])) || [];
+}
+function udsDeZona(t) {
+  const lista = udsDeZonaSinFiltro(t);
   return SERVICIO ? lista.filter(pasaServicio) : lista;
 }
 // La zona mas especifica que este filtrada ahora mismo: vereda > corregimiento
@@ -980,32 +986,51 @@ function habilitarFiltrosTerritorio(activo) {
   actualizarBotonModo();
 }
 
-// El conteo que se muestra al lado de cada servicio es el de TODA la base, no
-// el del municipio que este filtrado: sirve para dimensionar la modalidad
-// ("HCB son 1.639 en Antioquia"), y ademas no cambia bajo los pies mientras
-// se recorre la lista.
+// La lista se acota a la zona filtrada: muestra los servicios que de verdad
+// existen ahi, con el conteo de esa zona. Antes listaba los 14 con el total de
+// Antioquia, y eso ofrecia caminos sin salida -- elegir en Ituango un servicio
+// que solo existe en Uraba devolvia una tabla vacia sin explicar por que.
+// El servicio ya elegido se muestra SIEMPRE, aunque en la zona nueva tenga
+// cero: si desapareciera de la lista no habria manera de ver cual esta puesto
+// ni de entender por que no sale nada.
 function renderListaServicios(filtro) {
   const cont = $("#listaServicios");
   cont.innerHTML = "";
   const f = normalizar((filtro || "").trim());
+  const zona = zonaActiva();
+  const ambito = zona ? udsDeZonaSinFiltro(zona) : D.puntos;
+  const donde = zona ? zona.nombre : "Antioquia";
+
+  const cuenta = new Map();
+  ambito.forEach(p => { const s = p.serv || ""; if (s) cuenta.set(s, (cuenta.get(s) || 0) + 1); });
+
   if (!f && SERVICIO) {
     const todos = el("button", "candidato",
       "<b>Todos los servicios</b>" +
-      '<span class="pista">Quita el filtro: vuelven a contar las ' + mil(D.puntos.length) + " UDS</span>");
+      '<span class="pista">Quita el filtro: vuelven a contar las ' + mil(ambito.length) +
+      " UDS de " + esc(donde) + "</span>");
     todos.type = "button";
     todos.onclick = () => seleccionarServicio(null);
     cont.appendChild(todos);
   }
-  const hallados = SERVICIOS.filter(s => !f || normalizar(s.nombre).includes(f));
+
+  const hallados = SERVICIOS
+    .filter(s => cuenta.has(s.nombre) || s.nombre === SERVICIO)
+    .filter(s => !f || normalizar(s.nombre).includes(f))
+    .map(s => ({ nombre: s.nombre, n: cuenta.get(s.nombre) || 0 }))
+    .sort((a, b) => b.n - a.n);
+
   hallados.forEach(s => {
-    const b = el("button", "candidato",
-      esc(s.nombre) + '<span class="pista">' + mil(s.n) + (s.n === 1 ? " UDS" : " UDS") +
-      " en Antioquia</span>");
+    const b = el("button", "candidato" + (s.n === 0 ? " vacio" : ""),
+      esc(s.nombre) + '<span class="pista">' +
+      (s.n === 0 ? "sin UDS en " + esc(donde) : mil(s.n) + " UDS en " + esc(donde)) + "</span>");
     b.type = "button";
     b.onclick = () => seleccionarServicio(s.nombre);
     cont.appendChild(b);
   });
-  if (f && !hallados.length) cont.appendChild(el("div", "nota", "Sin coincidencias."));
+  if (!hallados.length) {
+    cont.appendChild(el("div", "nota", f ? "Sin coincidencias." : "Sin servicios en esta zona."));
+  }
 }
 function seleccionarServicio(nombre) {
   SERVICIO = nombre;

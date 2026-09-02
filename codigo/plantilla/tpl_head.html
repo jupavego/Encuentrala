@@ -245,6 +245,12 @@ details.card[open] summary h2::before{content:"–  "}
    territorio, corregimiento al que pertenece la vereda) */
 .candidato .pista{display:block;font-size:10.5px;font-weight:600;color:var(--ink3);margin-top:2px}
 .candidato:hover .pista{color:var(--icbf-verde-osc)}
+/* opcion que no tiene ninguna UDS en la zona filtrada: se sigue mostrando
+   -- es el servicio que esta puesto, y esconderlo dejaria sin explicacion la
+   tabla vacia -- pero atenuada, para que se lea que ese camino no lleva a
+   ningun resultado aqui. */
+.candidato.vacio{opacity:.5}
+.candidato.vacio .pista{font-style:italic}
 
 /* interruptor de la capa de contexto (el contorno tenue de TODAS las veredas
    del municipio). No quita el filtro -- corregimiento y vereda se comportan
