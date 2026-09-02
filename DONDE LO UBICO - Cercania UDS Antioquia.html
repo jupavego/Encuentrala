@@ -2038,7 +2038,17 @@ function initMapaBase() {
     div.innerHTML = '<p class="nota" style="padding:16px">No se pudo cargar el mapa (la librería Leaflet, desde unpkg.com, no llegó a cargar). Revisa la conexión a internet o si algo la está bloqueando (antivirus, firewall corporativo). El resto de la página sigue funcionando.</p>';
     return;
   }
-  const map = L.map(div, { scrollWheelZoom: true });
+  // zoomSnap:0 -> se permiten niveles de zoom FRACCIONARIOS.
+  // Por defecto Leaflet solo usa enteros, asi que fitBounds baja al entero
+  // inmediatamente inferior al que haria falta: si un municipio no cabe justo
+  // en el zoom 9, se muestra en el 8, que abarca el doble de area a lo ancho
+  // y a lo alto. Eso hacia que al elegir Ituango se viera media Antioquia con
+  // el municipio como una mancha pequena en el centro -- el contorno estaba
+  // completo, pero ocupando una fraccion diminuta del mapa.
+  // Con snap 0, fitBounds puede quedarse en 8.7 y el contorno llena el
+  // recuadro. Afecta a todos los encuadres del sitio (municipio, zona,
+  // anillos), siempre para ajustarlos mejor.
+  const map = L.map(div, { scrollWheelZoom: true, zoomSnap: 0 });
   MAPA = map;
   // renderer canvas compartido por la capa de contexto veredal: dibujar las
   // 235 veredas de un municipio como Turbo en SVG son 235 nodos del DOM y el
