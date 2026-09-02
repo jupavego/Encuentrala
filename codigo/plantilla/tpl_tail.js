@@ -553,10 +553,32 @@ D.puntos.forEach(p => {
   (UDS_POR_VEREDA[a[0]] = UDS_POR_VEREDA[a[0]] || []).push(p);
   if (a.length > 1) (UDS_POR_CORR[a[1]] = UDS_POR_CORR[a[1]] || []).push(p);
 });
+/* ---------------- filtro de servicio ----------------
+   Corta por un eje distinto al territorial: no acota DONDE se busca sino QUE
+   cuenta como resultado. Se aplica en los dos unicos sitios de los que sale
+   una lista de UDS -- udsDeZona() y buscarCercanas() -- y con eso queda
+   cubierto todo lo demas (mapa, tablas, contadores de zona y descarga a
+   Excel), sin tener que acordarse de filtrar en cada uno.
+   null = todos los servicios. */
+let SERVICIO = null;
+function pasaServicio(p) { return !SERVICIO || p.serv === SERVICIO; }
+// catalogo con su conteo, para la lista desplegable
+const SERVICIOS = (() => {
+  const c = new Map();
+  D.puntos.forEach(p => { const s = p.serv || ""; if (s) c.set(s, (c.get(s) || 0) + 1); });
+  return [...c.entries()].sort((a, b) => b[1] - a[1]).map(([nombre, n]) => ({ nombre, n }));
+})();
+
+// Coletilla para los subtitulos: una lista filtrada por servicio tiene que
+// decirlo, o se lee como si fuera todo lo que hay.
+function sufijoServicio() { return SERVICIO ? " · servicio: " + SERVICIO : ""; }
+
 function udsDeZona(t) {
   if (!t) return [];
-  if (t.tipo === "muni") return UDS_POR_MUNI[t.idx] || [];
-  return (t.tipo === "corr" ? UDS_POR_CORR[t.idx] : UDS_POR_VEREDA[t.idx]) || [];
+  const base = t.tipo === "muni" ? UDS_POR_MUNI[t.idx]
+    : (t.tipo === "corr" ? UDS_POR_CORR[t.idx] : UDS_POR_VEREDA[t.idx]);
+  const lista = base || [];
+  return SERVICIO ? lista.filter(pasaServicio) : lista;
 }
 // La zona mas especifica que este filtrada ahora mismo: vereda > corregimiento
 // > municipio. Es la que usa el modo "sin radio" para listar todo lo que hay
@@ -802,6 +824,11 @@ function dibujarZona(ajustarVista) {
 
 // nombre a mostrar en cada campo + refresco de los dos desplegables
 function pintarCamposTerritorio() {
+  // el campo de servicio comparte el onblur de los territoriales (ver init):
+  // si se escribio algo sin elegir nada de la lista, hay que devolverlo al
+  // valor real, o el campo quedaria mostrando un texto que no filtra nada.
+  const iServ = $("#inputServicio");
+  if (iServ && document.activeElement !== iServ) iServ.value = SERVICIO || "";
   const iCorr = $("#inputCorregimiento"), iVer = $("#inputVereda");
   if (!TERRITORIO) {
     iCorr.value = ""; iVer.value = "";
@@ -953,6 +980,41 @@ function habilitarFiltrosTerritorio(activo) {
   actualizarBotonModo();
 }
 
+// El conteo que se muestra al lado de cada servicio es el de TODA la base, no
+// el del municipio que este filtrado: sirve para dimensionar la modalidad
+// ("HCB son 1.639 en Antioquia"), y ademas no cambia bajo los pies mientras
+// se recorre la lista.
+function renderListaServicios(filtro) {
+  const cont = $("#listaServicios");
+  cont.innerHTML = "";
+  const f = normalizar((filtro || "").trim());
+  if (!f && SERVICIO) {
+    const todos = el("button", "candidato",
+      "<b>Todos los servicios</b>" +
+      '<span class="pista">Quita el filtro: vuelven a contar las ' + mil(D.puntos.length) + " UDS</span>");
+    todos.type = "button";
+    todos.onclick = () => seleccionarServicio(null);
+    cont.appendChild(todos);
+  }
+  const hallados = SERVICIOS.filter(s => !f || normalizar(s.nombre).includes(f));
+  hallados.forEach(s => {
+    const b = el("button", "candidato",
+      esc(s.nombre) + '<span class="pista">' + mil(s.n) + (s.n === 1 ? " UDS" : " UDS") +
+      " en Antioquia</span>");
+    b.type = "button";
+    b.onclick = () => seleccionarServicio(s.nombre);
+    cont.appendChild(b);
+  });
+  if (f && !hallados.length) cont.appendChild(el("div", "nota", "Sin coincidencias."));
+}
+function seleccionarServicio(nombre) {
+  SERVICIO = nombre;
+  $("#listaServicios").innerHTML = "";
+  $("#inputServicio").value = nombre || "";
+  $("#inputServicio").blur();
+  buscarYPintar();
+}
+
 function renderListaCorregimientos(filtro) {
   const cont = $("#listaCorregimientos");
   cont.innerHTML = "";
@@ -1077,7 +1139,11 @@ const RADIOS_BUSQUEDA = [500, 1000, 2000, 5000, 10000, 20000, 50000, 100000];
 const MIN_RESULTADOS = 5;
 
 function buscarCercanas(lat, lon) {
-  const conD = D.puntos
+  // el filtro de servicio entra ANTES de elegir el radio, no despues: si se
+  // descartaran las UDS ya elegido el radio, filtrar un servicio poco comun
+  // devolveria "0 resultados en 500 m" en vez de ampliar la busqueda hasta
+  // encontrar las de ese servicio.
+  const conD = (SERVICIO ? D.puntos.filter(pasaServicio) : D.puntos)
     .map(p => ({ p, d: distMetros(lat, lon, p.y, p.x) }))
     .sort((a, b) => a.d - b.d);
   let radioFinal = RADIOS_BUSQUEDA[RADIOS_BUSQUEDA.length - 1];
@@ -1529,9 +1595,9 @@ function pintarModoZona(zona, lista, resWrap, sub, dlWrap, mantenerVista) {
   const disp = lista.reduce((s, x) => s + Math.max(0, disponibles(x.p)), 0);
   sub.textContent = lista.length
     ? lista.length + (lista.length === 1 ? " unidad de servicio" : " unidades de servicio") +
-      " en " + zona.etiqueta + " " + zona.nombre + " · " + mil(cupos) + " cupos · " +
-      mil(disp) + " disponibles"
-    : "sin unidades de servicio en " + zona.etiqueta + " " + zona.nombre;
+      " en " + zona.etiqueta + " " + zona.nombre + sufijoServicio() + " · " + mil(cupos) +
+      " cupos · " + mil(disp) + " disponibles"
+    : "sin unidades de servicio en " + zona.etiqueta + " " + zona.nombre + sufijoServicio();
 
   if (dlWrap && lista.length) {
     dlWrap.appendChild(botonDescargaExcel(() => lista.map(x => x.p), () => zona.nombre));
@@ -1641,7 +1707,8 @@ function buscarYPintar(mantenerVista) {
     MAPA.setZoom(MAPA.getZoom() + 1, { animate: false });
   }
   sub.textContent = items.length
-    ? items.length + (items.length === 1 ? " unidad de servicio" : " unidades de servicio") + " en un radio de " + fmtDist(radioFinal)
+    ? items.length + (items.length === 1 ? " unidad de servicio" : " unidades de servicio") +
+      " en un radio de " + fmtDist(radioFinal) + sufijoServicio()
     : "";
   // exporta TODAS las UDS del radio de esta busqueda (las tres bandas
   // juntas), que es lo que esta seccion muestra. El bloque de zona, mas
@@ -1999,7 +2066,8 @@ function init() {
   // campo de municipio (clic sin escribir = lista completa, escribir filtra en
   // vivo sin distinguir mayusculas ni tildes), acotados al municipio actual.
   [["#inputCorregimiento", "#listaCorregimientos", renderListaCorregimientos],
-   ["#inputVereda", "#listaVeredas", renderListaVeredas]].forEach(([sel, selLista, render]) => {
+   ["#inputVereda", "#listaVeredas", renderListaVeredas],
+   ["#inputServicio", "#listaServicios", renderListaServicios]].forEach(([sel, selLista, render]) => {
     const inp = $(sel);
     inp.oninput = () => render(inp.value);
     inp.onfocus = () => { inp.select(); render(""); };

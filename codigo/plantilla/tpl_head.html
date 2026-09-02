@@ -207,6 +207,15 @@ details.card[open] summary h2::before{content:"–  "}
 .grupo-sel.territorio input:focus{border-color:var(--mde-amarillo-osc);
   box-shadow:0 0 0 3px rgba(201,154,0,.16)}
 .grupo-sel.territorio input:not(:placeholder-shown){border-color:var(--mde-amarillo);background:#FFFCF0}
+/* El servicio usa azul, no la familia amarilla: el amarillo esta reservado
+   para lo territorial (los dos filtros de zona y sus poligonos en el mapa) y
+   este filtro no dibuja nada, corta por otro eje. */
+.grupo-sel.servicio label::before{background:var(--azul)}
+.grupo-sel.servicio input:focus{border-color:var(--azul);
+  box-shadow:0 0 0 3px rgba(11,111,168,.15)}
+.grupo-sel.servicio input:not(:placeholder-shown){border-color:#8FC4E2;background:#EFF7FC}
+/* separador tenue: marca que de aqui abajo ya no se habla de territorio */
+.grupo-sel.separado{margin-top:20px;padding-top:18px;border-top:1px solid var(--rule)}
 /* flechita de "desplegable" -- puramente visual, el input sigue siendo de
    texto libre; solo avisa que hacer clic sin escribir muestra la lista
    completa, no solo resultados filtrados.
@@ -628,7 +637,7 @@ footer.build .autoria{display:inline-block;margin-top:12px;font-size:10.5px;font
     <div class="panel-controles">
 
       <div class="card">
-        <h2>1. Elige el territorio<small>el municipio acota el mapa y la búsqueda de dirección; corregimiento y vereda son opcionales y llevan el pin dentro de esa zona</small></h2>
+        <h2>1. Acota la búsqueda<small>el municipio acota el mapa y la búsqueda de dirección; corregimiento y vereda son opcionales y llevan el pin dentro de esa zona. El servicio filtra qué UDS se tienen en cuenta, en todo el sitio</small></h2>
         <div class="grupo-sel">
           <label for="inputMunicipio">Municipio</label>
           <input type="text" id="inputMunicipio" placeholder="Escribe para buscar…" autocomplete="off">
@@ -643,6 +652,15 @@ footer.build .autoria{display:inline-block;margin-top:12px;font-size:10.5px;font
           <label for="inputVereda">Vereda <span class="op">(opcional)</span></label>
           <input type="text" id="inputVereda" placeholder="Elige primero un municipio" autocomplete="off" disabled>
           <div class="candidatos desplegable" id="listaVeredas"></div>
+        </div>
+        <!-- El servicio no es territorio: no acota DONDE se busca sino QUE se
+             cuenta como resultado, y actua en todo el sitio a la vez (mapa,
+             cercania, modo por zona y descarga). Por eso va separado de los
+             tres de arriba y con su propio color de punto. -->
+        <div class="grupo-sel servicio separado">
+          <label for="inputServicio">Servicio <span class="op">(opcional)</span></label>
+          <input type="text" id="inputServicio" placeholder="Todos los servicios" autocomplete="off">
+          <div class="candidatos desplegable" id="listaServicios"></div>
         </div>
       </div>
 
