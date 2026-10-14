@@ -1,13 +1,16 @@
 # -*- coding: utf-8 -*-
 """
 Arma los GeoJSON para la capa de referencia del mapa Azure Maps de Power BI:
-municipios, corregimientos, veredas y cabeceras de Antioquia, coloreados por
-Centro Zonal ICBF.
+municipios, corregimientos, veredas y cabeceras de Antioquia, mas comunas y
+barrios de Medellin, coloreados por Centro Zonal ICBF.
 
 Lee solo lo que ya hay en recursos/ (no necesita el geojson crudo de "fuente/"):
   - datos_veredas.json : contornos de veredas y corregimientos + a que vereda
                          cae cada UDS
   - datos_cercania.json: contorno municipal, subregion y Centro Zonal de cada UDS
+  - medellin_barrios_comunas_cz.geojson: comunas, corregimientos y barrios de
+                         Medellin con su Centro Zonal (archivo entregado por la
+                         Regional; version compacta del original)
 
 Salida: powerbi/*.geojson
 
@@ -18,10 +21,11 @@ REGLAS QUE CONVIENE SABER
     NO se dibuja como corregimiento. Las cabeceras de verdad son las 125
     figuras de tipo VERE_TIPO = "CM" (cabecera municipal).
   * Centro Zonal: cada municipio cae en un solo CZ (el que declaran sus UDS),
-    salvo MEDELLIN, que tiene 5. El repo no trae las comunas de Medellin, asi
-    que alli el CZ se atribuye por mayoria de UDS en cada vereda/corregimiento
-    y el casco urbano se parte por proximidad a las UDS de cada CZ (poligonos
-    de Voronoi). Esas piezas urbanas llevan aprox_cz = true.
+    salvo MEDELLIN, cuyo CZ viene del archivo de comunas/barrios: CZ Integral
+    Nororiental, Integral Noroccidental, Sur Oriente y Rosales. ("BC MEDELLIN"
+    aparece en las UDS pero no tiene territorio propio, asi que no se pinta.)
+    En Medellin la cabecera es la union de sus 16 comunas, y las veredas y
+    corregimientos toman el CZ del poligono de corregimiento donde caen.
 
 Requiere shapely (pip install shapely).
 """
@@ -31,10 +35,10 @@ import io
 import json
 import os
 
-from shapely.geometry import MultiPolygon, Polygon, Point, mapping
+from shapely.geometry import Polygon, shape
 from shapely.geometry.polygon import orient
 from shapely import set_precision
-from shapely.ops import unary_union, voronoi_diagram
+from shapely.ops import unary_union
 
 D = os.path.dirname(os.path.abspath(__file__))
 RAIZ = os.path.dirname(D)
@@ -42,8 +46,10 @@ OUT_DIR = os.path.join(RAIZ, "powerbi")
 PRECISION = 4  # igual que el sitio; ~11 m
 # Simplificacion extra (grados) de veredas, corregimientos y cabeceras para que
 # el archivo completo quepa en lo que el visual de Power BI carga bien (~5 MB).
-# 0.0008 ~ 90 m: las veredas pequenas conservan su forma, los bordes se alisan.
-SIMPLIFICAR = float(os.environ.get("SIMPLIFICAR", "0.0008"))
+# 0.001 ~ 110 m: las veredas pequenas conservan su forma, los bordes se alisan.
+SIMPLIFICAR = float(os.environ.get("SIMPLIFICAR", "0.001"))
+# capas con figuras chicas o bordes muy visibles se simplifican menos (grados)
+TOL_CAPA = {"Municipio": 0.0004, "Cabecera": 0.0004, "Comuna": 0.0001, "Barrio": 0.00012}
 
 
 # ---------------------------------------------------------------- utilidades
@@ -89,10 +95,10 @@ def geom_desde_codificada(g):
     return None if u.is_empty else u
 
 
-def a_geojson(geom, sin_simplificar=False):
+def a_geojson(geom, sin_simplificar=None):
     """Poligono/multipoligono con anillos exteriores antihorarios (RFC 7946) y
     coordenadas a PRECISION decimales."""
-    tol = SIMPLIFICAR / 2 if sin_simplificar else SIMPLIFICAR
+    tol = TOL_CAPA.get(sin_simplificar, SIMPLIFICAR) if sin_simplificar else SIMPLIFICAR
     if tol > 0:
         g2 = geom.simplify(tol, preserve_topology=True)
         if not g2.is_valid:
@@ -147,17 +153,57 @@ assert all(m in CZ_MUNI for m in MUNIS), "hay municipios sin ninguna UDS"
 MULTI_CZ = {m for m, c in cz_muni_cnt.items() if len(c) > 1}
 print("municipios con mas de un CZ:", sorted(MULTI_CZ))
 
+MED = "MEDELLIN"
+MED_I = MUNIS.index(MED)
+
+# ---- Medellin: comunas, corregimientos y barrios con su CZ
+with io.open(os.path.join(RAIZ, "recursos", "medellin_barrios_comunas_cz.geojson"), encoding="utf-8") as f:
+    MEDF = json.load(f)
+
+
+def nz(s):
+    return s.upper().replace("Á", "A").replace("É", "E").replace("Í", "I").replace("Ó", "O").replace("Ú", "U")
+
+
+def valida(g):
+    return solo_poligonos(g if g.is_valid else g.buffer(0))
+
+
+med_comunas, med_corr_poly, med_barrios = [], [], []
+for ft in MEDF["features"]:
+    pr = ft["properties"]
+    g = valida(shape(ft["geometry"]))
+    item = (pr["name"], nz(pr["centro_zonal"]), g, pr.get("comuna"))
+    if pr.get("comuna") is not None:
+        med_barrios.append(item)
+    elif int(pr["name"].split()[0]) <= 16:
+        med_comunas.append(item)
+    else:
+        med_corr_poly.append(item)
+MED_CZS = sorted({x[1] for x in med_comunas + med_corr_poly})
+print("Medellin: %d comunas, %d corregimientos, %d barrios; CZ: %s"
+      % (len(med_comunas), len(med_corr_poly), len(med_barrios), MED_CZS))
+
 # ---- paleta: un matiz por CZ (se asigna mas abajo, cuando ya hay geometrias,
 # para que los CZ que se tocan queden con matices lejanos entre si)
-CZS = sorted(set(CZ_MUNI.values()) | {p["cz"] for p in C["puntos"]})
+CZS = sorted({CZ_MUNI[m] for m in MUNIS if m != MED} | set(MED_CZS))
 HUE_CZ = {}
+UNIDADES_CZ = collections.defaultdict(list)  # cz -> claves de color de sus municipios/comunas
+for m in MUNIS:
+    if m != MED:
+        UNIDADES_CZ[CZ_MUNI[m]].append(m)
+for n, cz, g, _ in med_comunas + med_corr_poly:
+    UNIDADES_CZ[cz].append("MED " + n)
+for cz in UNIDADES_CZ:
+    UNIDADES_CZ[cz].sort()
 
 
-def tono_municipio(muni, cz):
-    """(matiz, saturacion, luminosidad) base del municipio dentro de su CZ:
-    mismo matiz de familia, pero cada municipio unos puntos distinto."""
-    hermanos = sorted(m for m in MUNIS if CZ_MUNI[m] == cz or (m in MULTI_CZ and m == muni))
-    j = hermanos.index(muni) if muni in hermanos else 0
+def tono(clave, cz):
+    """(matiz, saturacion, luminosidad) de una unidad (municipio, o comuna /
+    corregimiento de Medellin) dentro de su CZ: misma familia de matiz, pero
+    cada unidad unos puntos distinta."""
+    hermanos = UNIDADES_CZ[cz]
+    j = hermanos.index(clave) if clave in hermanos else 0
     n = max(len(hermanos), 1)
     # orden entrelazado (0, n/2, 1, n/2+1 ...) para que vecinos alfabeticos no queden identicos
     orden = (j // 2) + (n + 1) // 2 * (j % 2)
@@ -165,19 +211,23 @@ def tono_municipio(muni, cz):
     return (HUE_CZ[cz] + 10 * t, 0.62 - 0.10 * abs(t), 0.50 + 0.16 * t)
 
 
-def estilo(capa, muni, cz):
-    h, s, l = tono_municipio(muni, cz)
+def estilo(capa, clave, cz):
+    h, s, l = tono(clave, cz)
     if capa == "Municipio":
-        return dict(fill=hsl(h, s, l + 0.08), stroke=hsl(h, s, l - 0.28), fo=0.45, sw=1.6, so=0.9)
+        return dict(fill=hsl(h, s, l + 0.08), stroke=hsl(h, s, l - 0.28), fo=0.45, sw=1.6)
     if capa == "Corregimiento":
-        return dict(fill=hsl(h, s, l), stroke=hsl(h, s, l - 0.22), fo=0.55, sw=1.0, so=0.9)
+        return dict(fill=hsl(h, s, l), stroke=hsl(h, s, l - 0.22), fo=0.55, sw=1.0)
+    if capa == "Comuna":
+        return dict(fill=hsl(h, s, l), stroke=hsl(h, s, l - 0.24), fo=0.60, sw=1.2)
     if capa == "Vereda":
-        return dict(fill=hsl(h, s, l + 0.10), stroke=hsl(h, s, l - 0.18), fo=0.50, sw=0.6, so=0.8)
-    return dict(fill=hsl(h, s, l - 0.14), stroke=hsl(h, s, l - 0.34), fo=0.85, sw=1.4, so=1.0)
+        return dict(fill=hsl(h, s, l + 0.10), stroke=hsl(h, s, l - 0.18), fo=0.50, sw=0.6)
+    if capa == "Barrio":
+        return dict(fill=hsl(h, s, l + 0.10), stroke=hsl(h, s, l - 0.18), fo=0.60, sw=0.5)
+    return dict(fill=hsl(h, s, l - 0.14), stroke=hsl(h, s, l - 0.34), fo=0.85, sw=1.4)
 
 
-def feature(capa, nombre, muni, cz, geom, extra=None):
-    st = estilo(capa, muni, cz)
+def feature(capa, nombre, muni, cz, geom, extra=None, clave=None):
+    st = estilo(capa, clave or muni, cz)
     props = {
         "capa": capa,
         "nombre": nombre,
@@ -191,19 +241,8 @@ def feature(capa, nombre, muni, cz, geom, extra=None):
         "stroke": st["stroke"], "stroke-width": st["sw"],
     })
     return {"type": "Feature", "properties": props,
-            "geometry": a_geojson(geom, sin_simplificar=(capa == "Municipio"))}
+            "geometry": a_geojson(geom, sin_simplificar=(capa if capa in TOL_CAPA else None))}
 
-
-# ------------------------------------------------------- UDS por vereda / corr.
-cz_por_vereda = collections.defaultdict(collections.Counter)
-cz_por_corr = collections.defaultdict(collections.Counter)
-for uid, a in V["uds"].items():
-    cz = cz_de_uds.get(uid)
-    if cz is None or punto_uds[uid]["mun"] != MUNIS[V["veredas"][a[0]]["m"]]:
-        continue  # (85 UDS caen en un municipio distinto al que declaran: coordenada mal capturada)
-    cz_por_vereda[a[0]][cz] += 1
-    if len(a) > 1:
-        cz_por_corr[a[1]][cz] += 1
 
 # ---------------------------------------------------------- geometria veredas
 ver_geom = {}
@@ -219,38 +258,29 @@ for i, co in enumerate(V["corregimientos"]):
 print("veredas con geometria: %d/%d ; corregimientos: %d/%d"
       % (len(ver_geom), len(V["veredas"]), len(cor_geom), len(V["corregimientos"])))
 
-# ------------------------------------------------------------ Medellin (5 CZ)
-MED = "MEDELLIN"
-MED_I = MUNIS.index(MED)
-uds_med = [(Point(punto_uds[u]["x"], punto_uds[u]["y"]), cz_de_uds[u])
-           for u, a in V["uds"].items()
-           if V["veredas"][a[0]]["m"] == MED_I and u in cz_de_uds and punto_uds[u]["mun"] == MED]
-print("UDS dentro de MEDELLIN:", len(uds_med))
+# --------------------------------------- CZ y clave de color de Medellin por posicion
+med_unidades = med_corr_poly + med_comunas  # corregimientos primero (el casco urbano es la suma de comunas)
 
 
-def cz_mas_cercano(geom):
+def unidad_med(geom):
+    """(nombre, cz) de la comuna/corregimiento de Medellin donde cae la figura;
+    si el punto interior no cae en ninguno, el de mayor traslape o el mas cercano."""
     p = geom.representative_point()
-    return min(uds_med, key=lambda t: t[0].distance(p))[1]
+    for n, cz, g, _ in med_unidades:
+        if g.contains(p):
+            return n, cz
+    mejor = max(med_unidades, key=lambda u: u[2].intersection(geom).area)
+    if mejor[2].intersection(geom).area > 0:
+        return mejor[0], mejor[1]
+    mejor = min(med_unidades, key=lambda u: u[2].distance(p))
+    return mejor[0], mejor[1]
 
 
-def cz_vereda(i):
-    ve = V["veredas"][i]
-    if MUNIS[ve["m"]] != MED:
-        return CZ_MUNI[MUNIS[ve["m"]]]
-    c = cz_por_vereda.get(i)
-    if c:
-        return c.most_common(1)[0][0]
-    if ve["cr"] is not None and cz_por_corr.get(ve["cr"]):
-        return cz_por_corr[ve["cr"]].most_common(1)[0][0]
-    return cz_mas_cercano(ver_geom[i])
-
-
-def cz_corr(i):
-    co = V["corregimientos"][i]
-    if MUNIS[co["m"]] != MED:
-        return CZ_MUNI[MUNIS[co["m"]]]
-    c = cz_por_corr.get(i)
-    return c.most_common(1)[0][0] if c else cz_mas_cercano(cor_geom[i])
+def cz_y_clave(muni, geom):
+    if muni != MED:
+        return CZ_MUNI[muni], muni
+    n, cz = unidad_med(geom)
+    return cz, "MED " + n
 
 
 # ---------------------------------------------- matices por adyacencia de CZ
@@ -265,9 +295,10 @@ def asignar_matices():
         if m["nombre"] != MED:
             geo_cz[CZ_MUNI[m["nombre"]]].append(
                 Polygon([(lon, lat) for lat, lon in m["poligono"][0]]).buffer(0))
-    med = unary_union([ver_geom[i] for i, ve in enumerate(V["veredas"])
-                       if ve["m"] == MED_I and i in ver_geom])
-    cz_med = {cz for _, cz in uds_med}
+    for n, cz, g, _ in med_unidades:
+        geo_cz[cz].append(g)
+    cz_med = set(MED_CZS)
+    med = unary_union([g for _, _, g, _ in med_unidades]).buffer(0.003)
     union = {cz: unary_union(gs).buffer(0.003) for cz, gs in geo_cz.items()}
     vecinos = collections.defaultdict(set)
     for a in union:
@@ -275,14 +306,10 @@ def asignar_matices():
             if a < b and union[a].intersects(union[b]):
                 vecinos[a].add(b)
                 vecinos[b].add(a)
-        if a not in cz_med and union[a].intersects(med.buffer(0.003)):
+        if a not in cz_med and union[a].intersects(med):
             for b in cz_med:
                 vecinos[a].add(b)
                 vecinos[b].add(a)
-    for a in cz_med:
-        for b in cz_med:
-            if a != b:
-                vecinos[a].add(b)
     lista = CZS
     n = len(lista)
 
@@ -313,36 +340,13 @@ def asignar_matices():
 
 asignar_matices()
 
-
-# casco urbano de Medellin: Voronoi de las UDS por CZ, recortado a la cabecera
-def partir_cabecera_medellin(cab):
-    """-> [(cz, geom)] ; poligonos de proximidad, recortados a la cabecera."""
-    puntos = [p for p, _ in uds_med]
-    x0, y0, x1, y1 = cab.bounds
-    m = 0.05
-    caja = Polygon([(x0 - m, y0 - m), (x1 + m, y0 - m), (x1 + m, y1 + m), (x0 - m, y1 + m)])
-    from shapely.geometry import MultiPoint
-    celdas = voronoi_diagram(MultiPoint(puntos), envelope=caja)
-    por_cz = collections.defaultdict(list)
-    for celda in celdas.geoms:
-        for p, cz in uds_med:
-            if celda.contains(p):
-                por_cz[cz].append(celda)
-                break
-    piezas = []
-    for cz, celdas_cz in por_cz.items():
-        g = solo_poligonos(unary_union(celdas_cz).intersection(cab))
-        if g is not None and not g.is_empty:
-            piezas.append((cz, g))
-    return piezas
-
-
 # ------------------------------------------------------------------ capas
-capas = {"municipios": [], "corregimientos": [], "veredas": [], "cabeceras": []}
-piezas_municipio_med = collections.defaultdict(list)  # cz -> geoms (Medellin)
+capas = {"municipios": [], "corregimientos": [], "comunas": [], "veredas": [],
+         "barrios": [], "cabeceras": []}
+municipio_med = collections.defaultdict(list)  # cz -> geoms (Medellin)
 
-# Veredas y cabeceras
-n_cab = n_ver = 0
+# Veredas (las cabeceras "CM" van aparte; la de Medellin se arma con las comunas)
+n_ver = 0
 for i, ve in enumerate(V["veredas"]):
     g = ver_geom.get(i)
     if g is None:
@@ -351,56 +355,53 @@ for i, ve in enumerate(V["veredas"]):
     corr = None
     if ve["cr"] is not None and V["corregimientos"][ve["cr"]]["n"] != "Cabecera":
         corr = V["corregimientos"][ve["cr"]]["n"]
-    es_cab = ve["t"] == "CM"
-    cz = cz_vereda(i)
-    extra = {"codigo": ve["cod"], "corregimiento": corr}
-    if muni == MED:
-        piezas_municipio_med[cz].append(g)
-    if es_cab:
-        n_cab += 1
-        if muni == MED:
-            for cz2, g2 in partir_cabecera_medellin(g):
-                capas["cabeceras"].append(feature(
-                    "Cabecera", "Cabecera " + muni.title(), muni, cz2, g2,
-                    {"codigo": ve["cod"], "aprox_cz": True}))
-                piezas_municipio_med[cz2].append(g2)
-            # la cabecera ya se repartio entre CZ: no cuenta entera para el municipio
-            piezas_municipio_med[cz].remove(g)
-        else:
-            capas["cabeceras"].append(feature("Cabecera", "Cabecera " + muni.title(), muni, cz, g, extra))
-    else:
-        n_ver += 1
-        capas["veredas"].append(feature("Vereda", ve["n"], muni, cz, g, extra))
+    if ve["t"] == "CM":
+        if muni != MED:
+            capas["cabeceras"].append(feature("Cabecera", "Cabecera " + muni.title(), muni,
+                                              CZ_MUNI[muni], g, {"codigo": ve["cod"]}))
+        continue
+    cz, clave = cz_y_clave(muni, g)
+    n_ver += 1
+    capas["veredas"].append(feature("Vereda", ve["n"], muni, cz, g,
+                                    {"codigo": ve["cod"], "corregimiento": corr}, clave))
 
 # Corregimientos reales (sin el pseudo-corregimiento "Cabecera")
 for i, co in enumerate(V["corregimientos"]):
     if co["n"] == "Cabecera" or i not in cor_geom:
         continue
     muni = MUNIS[co["m"]]
-    capas["corregimientos"].append(feature(
-        "Corregimiento", co["n"], muni, cz_corr(i), cor_geom[i],
-        {"veredas": co["nv"]}))
+    cz, clave = cz_y_clave(muni, cor_geom[i])
+    capas["corregimientos"].append(feature("Corregimiento", co["n"], muni, cz, cor_geom[i],
+                                           {"veredas": co["nv"]}, clave))
+
+# Medellin: comunas, barrios, cabecera (union de comunas por CZ)
+for n, cz, g, _ in med_comunas:
+    capas["comunas"].append(feature("Comuna", n, MED, cz, g, {}, "MED " + n))
+    municipio_med[cz].append(g)
+for n, cz, g, comuna in med_barrios:
+    clave = "MED " + (comuna if comuna else n)
+    capas["barrios"].append(feature("Barrio", n, MED, cz, g, {"comuna": comuna}, clave))
+for n, cz, g, _ in med_corr_poly:
+    municipio_med[cz].append(g)
+por_cz = collections.defaultdict(list)
+for n, cz, g, _ in med_comunas:
+    por_cz[cz].append(g)
+for cz, gs in sorted(por_cz.items()):
+    u = solo_poligonos(unary_union(gs).buffer(0.0001).buffer(-0.0001))
+    capas["cabeceras"].append(feature("Cabecera", "Cabecera Medellin", MED, cz, u, {}, "MED " + cz))
 
 # Municipios
 for m in C["municipios"]:
     nombre = m["nombre"]
     if nombre == MED:
-        for cz, gs in sorted(piezas_municipio_med.items()):
+        for cz, gs in sorted(municipio_med.items()):
             g = solo_poligonos(unary_union(gs).buffer(0.0002).buffer(-0.0002))
-            if g is not None:
-                capas["municipios"].append(feature(
-                    "Municipio", nombre, nombre, cz, g, {"aprox_cz": True}))
+            capas["municipios"].append(feature("Municipio", nombre, nombre, cz, g, {}, "MED " + cz))
         continue
-    anillo = [(lon, lat) for lat, lon in m["poligono"][0]]
-    g = Polygon(anillo)
-    if not g.is_valid:
-        g = solo_poligonos(g.buffer(0))
-    capas["municipios"].append(feature("Municipio", nombre, nombre, CZ_MUNI[nombre], g,
-                                       {}))
+    g = valida(Polygon([(lon, lat) for lat, lon in m["poligono"][0]]))
+    capas["municipios"].append(feature("Municipio", nombre, nombre, CZ_MUNI[nombre], g, {}))
 
-print("municipios(poligonos):", len(capas["municipios"]), "| corregimientos:",
-      len(capas["corregimientos"]), "| veredas:", n_ver, "| cabeceras(poligonos):",
-      len(capas["cabeceras"]))
+print({k: len(v) for k, v in capas.items()})
 
 # ---------------------------------------------------------------- escritura
 os.makedirs(OUT_DIR, exist_ok=True)
@@ -417,8 +418,9 @@ def escribir(nombre, features):
 
 for k, fs in capas.items():
     escribir("antioquia_" + k, fs)
-todo = capas["municipios"] + capas["corregimientos"] + capas["veredas"] + capas["cabeceras"]
-escribir("antioquia_completo", todo)
+# orden de dibujo: de la capa mas grande a la mas fina
+ORDEN = ["municipios", "corregimientos", "veredas", "cabeceras", "comunas", "barrios"]
+escribir("antioquia_completo", [x for k in ORDEN for x in capas[k]])
 
 # leyenda CZ -> color (para consulta; no es parte de la capa)
 leyenda = [{"centro_zonal": cz, "color_base": hsl(HUE_CZ[cz], 0.62, 0.50)} for cz in CZS]

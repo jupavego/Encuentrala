@@ -1,74 +1,70 @@
 [
  {
-  "centro_zonal": "BC MEDELLIN",
-  "color_base": "#309ACF"
- },
- {
   "centro_zonal": "CZ ABURRA NORTE",
-  "color_base": "#CFCF30"
+  "color_base": "#CFA030"
  },
  {
   "centro_zonal": "CZ ABURRA SUR",
-  "color_base": "#9ACF30"
+  "color_base": "#C5CF30"
  },
  {
   "centro_zonal": "CZ BAJO CAUCA",
-  "color_base": "#3030CF"
+  "color_base": "#307BCF"
  },
  {
   "centro_zonal": "CZ INTEGRAL NOROCCIDENTAL",
-  "color_base": "#CF3030"
+  "color_base": "#30CF43"
  },
  {
   "centro_zonal": "CZ INTEGRAL NORORIENTAL",
-  "color_base": "#CF309A"
+  "color_base": "#CF30A0"
  },
  {
   "centro_zonal": "CZ LA MESETA",
-  "color_base": "#CF3065"
+  "color_base": "#30CF7B"
  },
  {
   "centro_zonal": "CZ MAGDALENA MEDIO",
-  "color_base": "#65CF30"
+  "color_base": "#CF6830"
  },
  {
   "centro_zonal": "CZ OCCIDENTE",
-  "color_base": "#6530CF"
+  "color_base": "#5630CF"
  },
  {
   "centro_zonal": "CZ OCCIDENTE MEDIO",
-  "color_base": "#30CF65"
+  "color_base": "#8DCF30"
  },
  {
   "centro_zonal": "CZ ORIENTE",
-  "color_base": "#9A30CF"
+  "color_base": "#3043CF"
  },
  {
   "centro_zonal": "CZ ORIENTE MEDIO",
-  "color_base": "#CF9A30"
+  "color_base": "#56CF30"
  },
  {
   "centro_zonal": "CZ PENDERISCO",
-  "color_base": "#CF6530"
+  "color_base": "#CF3030"
  },
  {
   "centro_zonal": "CZ PORCE NUS",
-  "color_base": "#30CFCF"
+  "color_base": "#C530CF"
  },
  {
   "centro_zonal": "CZ ROSALES",
-  "color_base": "#30CF9A"
+  "color_base": "#CF3068"
  },
  {
   "centro_zonal": "CZ SUR ORIENTE",
-  "color_base": "#30CF30"
+  "color_base": "#30CFB3"
  },
  {
   "centro_zonal": "CZ SUROESTE",
-  "color_base": "#CF30CF"
+  "color_base": "#30B3CF"
  },
  {
   "centro_zonal": "CZ URABA",
-  "color_base": "#3065CF"
+  "color_base": "#8D30CF"
  }
 ]
