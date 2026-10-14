@@ -33,6 +33,7 @@ import os
 
 from shapely.geometry import MultiPolygon, Polygon, Point, mapping
 from shapely.geometry.polygon import orient
+from shapely import set_precision
 from shapely.ops import unary_union, voronoi_diagram
 
 D = os.path.dirname(os.path.abspath(__file__))
@@ -94,8 +95,13 @@ def a_geojson(geom, sin_simplificar=False):
     tol = SIMPLIFICAR / 2 if sin_simplificar else SIMPLIFICAR
     if tol > 0:
         g2 = geom.simplify(tol, preserve_topology=True)
+        if not g2.is_valid:
+            g2 = solo_poligonos(g2.buffer(0)) or g2
         if not g2.is_empty:
             geom = g2
+    # redondear a la malla de PRECISION decimales sin crear auto-intersecciones
+    # (set_precision repara lo que el redondeo simple deja invalido)
+    geom = solo_poligonos(set_precision(geom, 10 ** -PRECISION)) or geom
     partes = list(geom.geoms) if geom.geom_type == "MultiPolygon" else [geom]
     partes = [orient(p, 1.0) for p in partes if p.geom_type == "Polygon" and not p.is_empty]
     def rr(ring):
