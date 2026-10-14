@@ -21,6 +21,23 @@ Radio de búsqueda adaptativo, filtros de municipio / corregimiento / vereda, b�
 - `recursos/datos_veredas.json` — contornos de veredas/corregimientos y a qué vereda pertenece cada UDS.
 - `recursos/datos_cuentame.json` — la hoja CUENTAME completa, para la descarga a Excel.
 
+## GeoJSON para Power BI (Azure Maps)
+
+`powerbi/` trae el mapa de Antioquia listo para usar como **capa de referencia** del visual
+Azure Maps de Power BI, coloreado por Centro Zonal ICBF (un matiz por CZ; cada municipio, y sus
+veredas, corregimientos y cabecera, usan una variante suave de ese matiz).
+
+- `antioquia_completo.geojson` — las cuatro capas juntas (≈5,2 MB).
+- `antioquia_municipios.geojson`, `antioquia_corregimientos.geojson`, `antioquia_veredas.geojson`,
+  `antioquia_cabeceras.geojson` — cada capa por separado.
+- `leyenda_centros_zonales.json` y `vista_previa.png` — color base de cada CZ y una vista previa.
+
+Se regenera con `python codigo/generar_geojson_powerbi.py` (requiere shapely). Cada figura trae
+`capa`, `nombre`, `municipio`, `subregion`, `centro_zonal` y el estilo (`fill`, `fill-opacity`,
+`stroke`, `stroke-width`). "Cabecera" en el mapa veredal es el resto rural del municipio, no el
+casco urbano; las cabeceras reales son las figuras de tipo `CM`. Medellín tiene 5 CZ y el repo no
+trae sus comunas: su casco urbano se reparte por proximidad a las UDS de cada CZ (`aprox_cz`).
+
 ## Cómo reconstruir el sitio
 
 ```
